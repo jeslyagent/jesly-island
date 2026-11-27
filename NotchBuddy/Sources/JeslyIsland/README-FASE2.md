@@ -694,3 +694,102 @@ no depende del bundle id del build).
   `POST /v1/tasks/:id/verify` y `/publish`.
 - Pill `jesly_chat` + proveedor `JeslyChatProvider` (Fase 4, mapa D);
   `ChatProvider` de Coucou sigue sin tocarse.
+
+## 13. Fase 3, sesión 3 — tarjeta de sesión en vivo JESLY (2026-11-27, local, SIN pushear, SIN compilar)
+
+### 13.1 Hallazgo: NO hay endpoint nuevo — la isla tampoco usa `GET /v1/tasks/:id`
+
+Verificado en la isla actual (`IslandHomeView.swift`, HEAD `3e2a59db`):
+la "sesión en vivo" se deriva de las tres listas que ya sondea el
+poller (`GET /v1/tasks?status=...&kind=propuesta`). Los pasos son
+las tareas mismas (aplicadas = hechas, planificadas + en espera = en
+curso) y el diff sale del `patch` de la primera tarea con parche.
+Esta sesión porta esa lógica tal cual; ningún dato se inventa y
+ningún paso de terminal se fabrica: si la API no da un paso o un
+diff, esa parte no se muestra.
+
+### 13.2 Archivo nuevo (1)
+
+- `Views/JeslySessionCardView.swift` — `JeslySessionView` + porte
+  verbatim de `PatchStats` (`JeslyPatchStats`/`JeslyPatchTicker`) y
+  de los pasos (`JeslySessionStep`, `JeslyStepIcon`, `shortTime`
+  HH:mm con los dos formateadores ISO8601 de la isla).
+  Cromo de Coucou: `CardBackground(wash: nil)` como la tarjeta de
+  sesión de Coucou, `PrimaryButton`/`SecondaryButton` verbatim,
+  padding izquierdo 116 como `JeslyProposalView`.
+
+### 13.3 Qué muestra la tarjeta y de dónde sale cada dato
+
+- Cabecera "Sesión en vivo": punto hueso si `apiReachable`, gris si
+  no; rama de la primera tarea activa ("rama X"); sin sesión:
+  "Sin sesión activa" (API arriba) o "API local sin responder"
+  (API apagada). Todo de las listas del poller.
+- Contador de diff (archivo +N −M): del `patch` de la primera tarea
+  con parche; cuenta líneas `+`/`-` sin las cabeceras `+++`/`---`;
+  el archivo sale de la primera cabecera `+++` (o `---` si se borró).
+- Pasos (máx. 4): aplicadas arriba con ✓, planificadas + en espera
+  abajo con spinner; hora HH:mm de `updatedAt`. Sin tareas:
+  "Nada en curso. Cuando un agente proponga algo, aparece aquí."
+- Botones de la tarea en curso: sus `availableActions` (Aplicar /
+  Ejecutar / Descartar / Revertir), primaria = primera no
+  destructiva, por `store.act` con `shownId` capturado (igual que la
+  sesión 2). Sin parche no hay contador de diff: no se inventa.
+
+### 13.4 Cableado (3 archivos tocados)
+
+- `CoucouKit/IslandTypes.swift`: caso nuevo `IslandView.jeslySession`
+  (sin switch exhaustivo que romper; `IslandRootView` itera
+  `allCases`; `HookServer.expandIfNeeded` y `VoiceWakeFilter` tienen
+  `default`).
+- `App/IslandViewContent.swift`: dispatch a `JeslySessionView()`.
+- `JeslyIsland/JeslyProposalStore.swift`: `syncIsland` ahora elige
+  por estado de `current` — esperando → `.jeslyProposal` (sesión 2,
+  intacta); planificada/aplicada → `.jeslySession`. Puede cambiar
+  entre las dos vistas JESLY cuando la isla está expandida; con la
+  isla plegada abre con `.hookExpand` (el observador de
+  `IslandWindowController` acepta cualquier `IslandView` como
+  objeto, verificado). Cuando no queda nada, cierra las dos vistas.
+  Cambio de comportamiento documentado: la rama planificada/aplicada
+  de `JeslyProposalView` ya no se alcanza por `syncIsland` — sus
+  botones viven ahora en la tarjeta de sesión. La tarjeta de
+  permiso (Permitir/Denegar/Siempre) no cambia.
+
+### 13.5 Verificación sin compilar (hecha)
+
+- Balance llaves/paréntesis/corchetes **0** (scanner Swift-aware con
+  interpolación) en los 4 archivos nuevos/tocados.
+- Sin endpoint nuevo: grep — el archivo nuevo solo menciona en
+  comentarios el endpoint de listas que ya existe; no hay
+  `GET /v1/tasks/:id`, no hay pasos ni diffs hardcodeados.
+- Sin hook en el camino de JESLY: solo menciones en comentarios y
+  `.hookExpand` (el mecanismo legítimo de Coucou para abrir la isla,
+  igual que la sesión 2).
+- Sin colisión de nombres (`JeslySessionView`, `JeslyPatchTicker`,
+  `JeslyPatchStats` no existen en Coucou). `project.yml` sin tocar
+  (el glob `Sources` ya incluye `Sources/JeslyIsland/`).
+- **No afirmo que compile** — solo la Mac lo confirma. Sospechosos
+  si falla: el `switch` nuevo en `IslandViewContent`, el caso nuevo
+  en `IslandTypes`, o el `syncIsland` reescrito del store.
+
+### 13.6 Riesgos y límites conocidos
+
+- Con la API apagada no aparece ninguna tarjeta nueva ni hay errores
+  (mismo comportamiento que las sesiones 1–2).
+- Si JC está en otra vista de la isla (chat, ajustes) cuando empieza
+  una tarea, la tarjeta no se la roba: aparece en el siguiente
+  sondeo (5 s) o al volver al home.
+- Los pasos se derivan de las listas del poller, no de un log de
+  ejecución: una tarea recién decidida puede verse un instante como
+  "en curso" hasta el siguiente sondeo bueno (igual que la isla).
+- La tarjeta no pone badge en la pill (sigue sin haber `AgentTask`
+  de JESLY en `state.tasks`). Follow-up, no de esta sesión.
+- Verificación/publicación (`POST /v1/tasks/:id/verify`, `/publish`)
+  NO están en esta sesión: eso es Fase 4.
+
+### 13.7 Para la Fase 4
+
+- Verificación/publicación en la tarjeta (mapa A):
+  `POST /v1/tasks/:id/verify` y `/publish`.
+- Pill `jesly_chat` + proveedor `JeslyChatProvider` (mapa D);
+  `ChatProvider` de Coucou sigue sin tocarse.
+- Voz "Oye JESLY" (mapa E) y ojos (mapa C).

@@ -32,8 +32,9 @@ public struct AlwaysRule: Codable, Equatable, Identifiable {
 ///
 /// Lee las tres listas de `JeslyProposalsPoller` (sesión 1) y pone
 /// la primera propuesta —esperando, luego planificada, luego
-/// aplicada— en la tarjeta de la isla (`JeslyProposalView`). La
-/// tarjeta nunca habla con el hook de Coucou: cada botón llama a
+/// aplicada— en la tarjeta que toca: esperando → `JeslyProposalView`
+/// (sesión 2); planificada/aplicada → `JeslySessionView` (sesión 3),
+/// que lleva los mismos botones de esa tarea. La tarjeta nunca habla con el hook de Coucou: cada botón llama a
 /// `JeslyAPIClient.proposalAction(_:taskId:)` con el `task id`
 /// exacto de la propuesta que está en pantalla, y la decisión solo
 /// vale para esa propuesta.
@@ -125,28 +126,33 @@ final class JeslyProposalStore: ObservableObject {
         syncIsland()
     }
 
-    /// Abre la tarjeta cuando hay propuesta, la cierra cuando no queda
-    /// ninguna. Nunca roba la isla de un permiso o una pregunta de
+    /// Abre la tarjeta que toca según lo que hay: permiso esperando →
+    /// `.jeslyProposal` (sesión 2, intacta); trabajo en curso
+    /// (planificada/aplicada) → `.jeslySession` (sesión 3), que lleva
+    /// los mismos botones de esa tarea (Aplicar/Ejecutar/Descartar/
+    /// Revertir). Nunca roba la isla de un permiso o una pregunta de
     /// Coucou que JC esté respondiendo, ni de una vista en la que esté
     /// trabajando (chat, ajustes…): en ese caso la tarjeta espera a
     /// que vuelva al home.
     private func syncIsland() {
         let state = AppState.shared
-        if current != nil {
+        if let task = current {
             guard state.pendingApproval == nil, state.pendingQuestion == nil else { return }
-            guard state.view != .jeslyProposal else { return }
+            // Lo que espera permiso manda; lo demás es sesión en vivo.
+            let target: IslandView = task.status == "esperando_aprobacion" ? .jeslyProposal : .jeslySession
+            guard state.view != target else { return }
             if state.mode == .expanded {
                 switch state.view {
-                case .overview, .empty, .finished, .error:
-                    state.view = .jeslyProposal
+                case .overview, .empty, .finished, .error, .jeslyProposal, .jeslySession:
+                    state.view = target
                 default:
                     return
                 }
             } else {
                 // Como las alertas de Coucou: fuerza la apertura.
-                NotificationCenter.default.post(name: .hookExpand, object: IslandView.jeslyProposal)
+                NotificationCenter.default.post(name: .hookExpand, object: target)
             }
-        } else if state.view == .jeslyProposal {
+        } else if state.view == .jeslyProposal || state.view == .jeslySession {
             state.view = state.tasks.isEmpty ? .empty : .overview
         }
     }

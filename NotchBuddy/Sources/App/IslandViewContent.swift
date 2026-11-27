@@ -12,6 +12,7 @@ struct IslandViewContent: View {
         case .empty:     EmptyStateView(state: state)
         case .approval:  ApprovalView(state: state)
         case .jeslyProposal: JeslyProposalView()
+        case .jeslySession:  JeslySessionView()
         case .question:  QuestionView(state: state)
         case .error:     ErrorView(state: state)
         case .finished:  FinishedView(state: state)

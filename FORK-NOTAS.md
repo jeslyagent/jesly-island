@@ -542,3 +542,54 @@ pill `jesly_chat` + `JeslyChatProvider` (Fase 4). Riesgos: la tarjeta
 no roba otras vistas (aparece al volver al home o en el siguiente
 sondeo); sin badge en la pill; con la API apagada tras actuar, los
 ids decididos se guardan hasta el primer sondeo bueno.
+
+## FASE 3, SESIÓN 3 — tarjeta de sesión en vivo JESLY (2026-11-27, local, SIN pushear, SIN compilar)
+
+### 1. Hallazgo: sin endpoint nuevo
+
+La isla actual (`IslandHomeView.swift`, HEAD `3e2a59db`) deriva la
+sesión en vivo de las tres listas ya sondeadas
+(`GET /v1/tasks?status=...&kind=propuesta`); NO usa
+`GET /v1/tasks/:id`. Pasos = tareas (aplicadas hechas, planificadas
++ en espera en curso); diff = `patch` de la primera tarea con
+parche, contado de verdad. Nada inventado, ningún paso de terminal
+fabricado.
+
+### 2. Archivos nuevos/cambiados
+
+- Nuevo: `Views/JeslySessionCardView.swift` (`JeslySessionView` +
+  porte verbatim de `PatchStats` y de los pasos/hora de la isla;
+  cromo Coucou: `CardBackground(wash: nil)`, botones píldora
+  verbatim, padding 116).
+- `IslandTypes.swift`: caso `IslandView.jeslySession`.
+- `IslandViewContent.swift`: dispatch a `JeslySessionView()`.
+- `JeslyProposalStore.swift`: `syncIsland` elige por estado —
+  esperando → `.jeslyProposal` (sesión 2 intacta);
+  planificada/aplicada → `.jeslySession`, que lleva los mismos
+  botones de esa tarea (Aplicar/Ejecutar/Descartar/Revertir).
+  La rama planificada/aplicada de `JeslyProposalView` ya no se
+  alcanza por `syncIsland`; sus botones viven en la sesión.
+
+### 3. Qué muestra y de dónde sale
+
+Cabecera "Sesión en vivo" + rama ("rama X" / "Sin sesión activa" /
+"API local sin responder") + diff real (archivo +N −M, sin contar
+cabeceras `+++`/`---`); pasos máx. 4 (✓ aplicadas, spinner en
+curso, HH:mm de `updatedAt`); sin tareas: "Nada en curso…".
+Con la API apagada: nada nuevo, sin errores.
+
+### 4. Verificación sin compilar (hecha)
+
+Balance 0 en los 4 archivos (scanner con interpolación); sin
+endpoint nuevo ni datos hardcodeados (grep); sin hook en el camino
+de JESLY (solo comentarios y `.hookExpand`, como la sesión 2); sin
+colisión de nombres; `project.yml` sin tocar. **Sin compilar: solo
+la Mac lo confirma.**
+
+### 5. Para la Fase 4
+
+Verificación/publicación en la tarjeta (`POST /v1/tasks/:id/verify`,
+`/publish`); pill `jesly_chat` + `JeslyChatProvider`; voz "Oye
+JESLY"; ojos. Riesgos: la tarjeta no roba otras vistas; pasos
+derivados de las listas (una tarea recién decidida puede verse un
+instante en curso); sin badge en la pill.
