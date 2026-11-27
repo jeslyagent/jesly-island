@@ -4714,8 +4714,8 @@ struct WardrobeView: View {
     @ObservedObject var state: AppState
 
     var body: some View {
-        // Fase 2, sesión 3: JESLY no tiene ropa. El selector de outfits se
-        // quitó entero (grid, preview, `OutfitPillView`, `drawOutfitIcon`);
+        // Fase 2, sesión 3: JESLY no tiene ropa. El selector de ropa se
+        // quitó entero (grid, preview y el icono de ropa);
         // la vista queda como aviso y la ruta `.wardrobe` sigue existiendo
         // para no tocar el dispatcher, los atajos ni el controlador.
         VStack(alignment: .leading, spacing: 8) {

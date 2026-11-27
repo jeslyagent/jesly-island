@@ -195,11 +195,8 @@ final class BotEngine: ObservableObject {
     var morph:  CGFloat = 0          // morph to rect (for upload bucket)
     var hands:  CGFloat = 0
     var blush:  CGFloat = 0
-    var outfit: Outfit = .none
     var es:     CGFloat = 1          // eye scale
     var badgeS: CGFloat = 0          // badge scale
-    var outfitPresence: CGFloat = 0  // 0=hidden, 1=fully visible (animated)
-    private var outfitTarget: Outfit = .none
 
     // Physical spring (hat/pompom lag) — updated in update()
     var physDx: CGFloat = 0   // horizontal lag (-1..1)
@@ -208,7 +205,6 @@ final class BotEngine: ObservableObject {
     private var physVy: CGFloat = 0
     private var prevYaw: CGFloat = 0
     private var prevOy: CGFloat = 0
-    private var prevRoll: CGFloat = 0
 
     // Targets
     var tgYaw:    CGFloat = 0
@@ -530,18 +526,6 @@ final class BotEngine: ObservableObject {
             self?.roll = 0
             self?.squash()
         }
-    }
-
-    /// Fase 2, sesión 3: JESLY no tiene ropa. No-op por compatibilidad:
-    /// los llamadores que quedan (`HubMochiScene`, controlador del flotante)
-    /// siguen compilando, pero ningún outfit se aplica jamás. `outfit` y
-    /// `outfitPresence` se mantienen como estado muerto (los lee el propio
-    /// motor en `update`/`draw`); se quitan cuando caiga `BotEngine`.
-    func setOutfit(_ newOutfit: Outfit, animated: Bool = true) {
-        _ = newOutfit
-        _ = animated
-        outfit = .none
-        outfitPresence = 0
     }
 
     func greet() {
@@ -1070,11 +1054,8 @@ final class BotEngine: ObservableObject {
         // Phys spring for hat/pompom lag
         let yawVel  = (yaw  - prevYaw)  / CGFloat(dt)
         let oyVel   = (oy   - prevOy)   / CGFloat(dt)
-        let rollVel = (roll - prevRoll) / CGFloat(dt)
-        prevYaw = yaw; prevOy = oy; prevRoll = roll
-        // Centrifugal physDx impulse when rigidly rolling with an outfit
-        let centrifugal: CGFloat = (outfit != .none && outfitPresence > 0.05) ? rollVel * 0.18 : 0
-        let tDx = max(-1, min(1, -yawVel * 0.35 - tilt * 2 + centrifugal))
+        prevYaw = yaw; prevOy = oy
+        let tDx = max(-1, min(1, -yawVel * 0.35 - tilt * 2))
         let tDy = max(-1, min(1,  oyVel  * 0.50))
         let stiff: CGFloat = 60, damp: CGFloat = 9
         physVx += (stiff * (tDx - physDx) - damp * physVx) * dtCG
@@ -1126,7 +1107,7 @@ final class BotEngine: ObservableObject {
 
         // Body fill
         drawBody(ctx: &ctx, path: bodyPath, R: R, rx: rx, ry: ry,
-                 pumpkinColors: outfit == .pumpkin && !isMini)
+                 pumpkinColors: false)
 
         // A warm Mac flushes him (MochiMood.swift).
         drawMoodTint(ctx: &ctx, path: bodyPath, rx: rx, ry: ry)
@@ -1314,47 +1295,12 @@ final class BotEngine: ObservableObject {
         drawParticles(context: context, size: size, R: R, cx: cx, cy: cy)
     }
 
-    func drawOutfitBehind(context: GraphicsContext, size: CGSize) {
-        guard outfit != .none, !isMini else { return }
-        let W = size.width, H = size.height, R = W * 0.3
-        let cx = W / 2 + ox * R
-        let cy = H / 2 + particleOverhang / 2 + oy * R + R * 0.06
-        // Rigid roll: accessories see roll=0 (they rotate with the body via context transform)
-        let outfitRoll: CGFloat = outfitPresence > 0.05 ? 0 : roll
-        let mH = MochiH(R: R, yaw: yaw, pitch: pitch, physDx: physDx, physDy: physDy, roll: outfitRoll)
-        drawOutfitBehindStatic(context: context, outfit: outfit, H: mH,
-                               cx: cx, cy: cy, tilt: tilt, sx: sx, sy: sy,
-                               roll: outfitRoll, morph: morph, isMini: isMini,
-                               presence: outfitPresence, rollTurns: rollTurns)
-    }
-
-    func drawOutfitFront(context: GraphicsContext, size: CGSize) {
-        guard outfit != .none, !isMini else { return }
-        let W = size.width, H = size.height, R = W * 0.3
-        let cx = W / 2 + ox * R
-        let cy = H / 2 + particleOverhang / 2 + oy * R + R * 0.06
-        // Rigid roll: accessories see roll=0 (they rotate with the body via context transform)
-        let outfitRoll: CGFloat = outfitPresence > 0.05 ? 0 : roll
-        let mH = MochiH(R: R, yaw: yaw, pitch: pitch, physDx: physDx, physDy: physDy, roll: outfitRoll)
-        drawOutfitFrontStatic(context: context, outfit: outfit, H: mH,
-                              cx: cx, cy: cy, tilt: tilt, sx: sx, sy: sy,
-                              roll: outfitRoll, morph: morph, isMini: isMini,
-                              presence: outfitPresence, rollTurns: rollTurns)
-    }
-
     /// World-space center of Mochi's body (used by BotCanvasView for rigid-roll transform)
     func bodyCenter(size: CGSize) -> CGPoint {
         let W = size.width, R = W * 0.3
         let cx = W / 2 + ox * R
         let cy = size.height / 2 + particleOverhang / 2 + oy * R + R * 0.06
         return CGPoint(x: cx, y: cy)
-    }
-
-    var outfitFollowsRoll: Bool {
-        switch outfit {
-        case .sunglasses, .roundGlasses, .bow, .scarf, .pumpkin: return true
-        default: return false
-        }
     }
 
     // MARK: - Private draw helpers
@@ -1504,12 +1450,10 @@ final class BotEngine: ObservableObject {
         ctx.clip(to: path)
 
         // Build eye frames: use mEyeFrames for position/foreshortening, but keep roll in eyePitch
-        // When an outfit is rigidly rotating, the whole body turns — eyes do NOT add roll
-        let rigidRoll = outfit != .none && outfitPresence > 0.05
         let mH = MochiH(R: R, yaw: yaw, pitch: pitch)
         for f in mEyeFrames(mH) {
-            // Re-derive pitch with roll for the roll-through effect (illusion, outfit=none only)
-            var eyePitch = MochiConst.eyeP + pitch + (rigidRoll ? 0 : roll)
+            // Re-derive pitch with roll for the roll-through effect.
+            var eyePitch = MochiConst.eyeP + pitch + roll
             eyePitch = ((eyePitch + .pi).truncatingRemainder(dividingBy: .pi*2) + .pi*2).truncatingRemainder(dividingBy: .pi*2) - .pi
             let cp = cos(eyePitch)
             let eyeYaw = f.sd * MochiConst.eyeSp + yaw
@@ -1797,7 +1741,6 @@ final class BotEngine: ObservableObject {
         case "blush":         blush         = value
         case "es":            es            = value
         case "badgeS":        badgeS        = value
-        case "outfitPresence": outfitPresence = value
         case "listenHandRaise": listenHandRaise = value
         default: break
         }
@@ -1820,7 +1763,6 @@ final class BotEngine: ObservableObject {
         case "blush":         return blush
         case "es":            return es
         case "badgeS":        return badgeS
-        case "outfitPresence": return outfitPresence
         case "listenHandRaise": return listenHandRaise
         default:              return 0
         }

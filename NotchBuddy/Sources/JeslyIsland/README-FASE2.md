@@ -398,3 +398,113 @@ animar oculta, minis a 30). Balance 0 en los 2; `SmokeCloudView` tiene
 valor por defecto en el parámetro nuevo, así que `DesktopMochi` y
 `FlowHubMochis` compilan sin tocarse (verificado por grep).
 **Sin compilar: solo la Mac lo confirma.**
+
+## 10. Sesión 5 — hecho 2026-11-27 (local, SIN pushear, SIN compilar)
+
+Sesión 4 verificada en vivo antes de empezar (13:38 AST: tras un BUILD
+FAILED inicial por proyecto Xcode viejo y limpiar con Shift+Cmd+K, la
+nube se ve bien completa en el notch cerrado).
+
+### 10.1 Flow Hub sin Mochis: `HubHero` / `HubMochiScene` fuera
+
+- `FlowHubMochis.swift` (531 → 338 l.): borrados `HubMochiSpec`,
+  `HubMochiTroupe` (con su `Walker`) y `HubMochiScene` (la tropa que
+  caminaba con `BotEngine.draw`, emotes y `poke`). `HubHero` queda como
+  banda de color + título + subtítulo + acción, con su fondo de
+  partículas (`HubHeroBackdrop` / `HubHeroLight`, que ya parecían nube de
+  puntos) y sin escena: el `Spacer(minLength: 290/350)` que reservaba
+  sitio para la tropa pasa a `Spacer()`. Su API no cambia
+  (`page`/`title`/`subtitle`/`trailing`/`compact`): los 3 llamadores
+  (`FlowHub.swift:254, 420`, `FlowHubNotes.swift:19`) no se tocaron.
+- `HubHeroTheme` pasa a solo color (`of(page)` devuelve el mismo color
+  por página que antes, sin `cast`); `theme.cast` ya no existe.
+- `HubLiveMochi` pierde el parámetro `outfit` (el tipo `Outfit` muere
+  en esta sesión); `FlowHubNotes.swift:207` deja de pasar
+  `outfit: .roundGlasses`. `color` y `state` se quedan (la nube los
+  ignora, pero son tipos que siguen existiendo).
+
+### 10.2 `BotEngine` destripado del outfit
+
+- Borrados: `outfit`, `outfitPresence`, `outfitTarget`, `setOutfit`
+  (no-op desde la sesión 3), `drawOutfitBehind`, `drawOutfitFront`,
+  `outfitFollowsRoll`, los casos `"outfitPresence"` de
+  `setProperty`/`getProperty`, y el impulso centrífugo
+  (`centrifugal` + `rollVel` + `prevRoll`, que solo existían por la
+  ropa). `pumpkinColors` pasa a `false` (nunca se aplica ropa) y el
+  `rigidRoll` de los ojos pasa a `+ roll` directo.
+- `drawOutfitBehind`/`drawOutfitFront` ya eran código muerto: `draw()`
+  nunca los llamaba (verificado por grep).
+
+### 10.3 El hallazgo: `MochiOutfitDrawing.swift` NO era solo ropa
+
+El archivo (1.464 l.) guardaba también la geometría compartida de
+cabeza/ojos que `BotEngine.drawEyes` necesita: `MochiH`,
+`EyeFrame`, `mEyeFrames` (y el shim `mochiEyePositions`). Borrarlo a
+ciegas habría roto los ojos de Mochi en la habitación, las pills y el
+resumen semanal. Solución: esa geometría se extrajo **verbatim** a un
+archivo nuevo, `NotchBuddy/Sources/CoucouKit/MochiHeadGeometry.swift`
+(verificado por `diff` contra las líneas 1–77 del original; solo se
+dejaron fuera las constantes `kEXP` y `kACC_PITCH`, que solo usaban
+los helpers 3D del outfit). El resto del archivo — `mochiOutfitPath`,
+`outfitBodyTransform`, `drawOutfitFrontStatic`,
+`drawOutfitBehindStatic` y todos los sombreros/gafas/bufandas — se fue
+con él.
+
+### 10.4 Archivos borrados (6 + 2 de tooling)
+
+| Archivo | Por qué |
+|---|---|
+| `NotchBuddy/Sources/CoucouKit/MochiOutfitDrawing.swift` | Ropa; geometría extraída a `MochiHeadGeometry.swift` |
+| `NotchBuddy/Sources/CoucouKit/MochiWardrobe.swift` | El tipo `Outfit` (enum, `seasonal`, `resolved`, `stored`) |
+| `tests/MochiWardrobeTests.swift` | Tests del `Outfit` |
+| `scripts/test-wardrobe.sh` | Corre esos tests (compila `MochiWardrobe.swift` + tests) |
+| `scripts/RenderOutfits.swift` | Render de planchas de outfits; solo existía para la ropa |
+| `scripts/render-outfits.sh` | Compila el render anterior (no estaba en CI) |
+
+Además: `.github/workflows/build.yml` pierde el paso `Wardrobe tests`
+(era el único sitio de CI que corría `test-wardrobe.sh`; sin ese paso
+el CI fallaría buscando el script borrado). YAML validado.
+
+### 10.5 Condición de borrado: CUMPLIDA en el ámbito Mac
+
+Grep después del borrado (`Outfit`/`setOutfit`/`drawOutfit`,
+`NotchBuddy/Sources` + `tests/` + `scripts/` + `.github/`): **0
+referencias en código** — solo 2 comentarios de documento (el de
+`HubLiveMochi`, que explica que el parámetro murió, y la cabecera de
+`MochiHeadGeometry.swift`, que explica la extracción). Balance
+llaves/paréntesis/corchetes 0 en los 5 Swift tocados; `HubHeroTheme`
+sin `cast`; llamadores de `HubHero` intactos.
+**Sin compilar: solo la Mac lo confirma.**
+
+Lo que el grep NO cubre (ámbito fuera de esta sesión, a propósito):
+Android (`android/.../mochi/outfit/`, su propio `Outfit` Kotlin) y
+Windows (`windows/src/mochi/outfits.ts`, `wardrobe.ts`) tienen su
+propia ropa y NO se tocaron. `CHANGELOG.md:441` es historia.
+`Localizable.xcstrings` guarda valores muertos de nombres de ropa
+("Party hat", etc.) — no se tocó el JSON. `project.pbxproj` (trackeado,
+generado por XcodeGen) todavía referencia los 6 archivos borrados
+hasta que JC corra `xcodegen` en su Mac (su flujo habitual) — ver §10.6.
+
+### 10.6 Qué queda de Mochi y por qué
+
+- `MochiRoom` / `FlowHubRoom`, `MochiStill` (Phone/Widgets),
+  `MochiMood` (+ `MoodDrop`/`MoodHop`), `BotEngine` en el árbol
+  (sigue dibujando a Mochi en la habitación, las pills y el resumen
+  semanal), 29 WAV, `whats-new.json`: intactos, por decisión del
+  encargo (no se tocan en esta sesión).
+- `WardrobeView` sigue existiendo como aviso ("JESLY no tiene ropa")
+  y la ruta `.wardrobe` + atajo ⌃⌥G + notificación
+  `openWardrobeFromDesktop` siguen: son ruta, no ropa.
+- `PRODUCT_NAME` + bundle id + firmado: NO tocados (ver §8).
+
+### 10.7 Archivos cambiados en esta sesión
+
+| Archivo | Cambio |
+|---|---|
+| `NotchBuddy/Sources/App/FlowHubMochis.swift` | Tropa fuera; `HubHero` solo banda; tema solo color; `HubLiveMochi` sin `outfit` (−221/+33 l.) |
+| `NotchBuddy/Sources/CoucouKit/BotEngine.swift` | Destripe del outfit (−~90 l.) |
+| `NotchBuddy/Sources/CoucouKit/MochiHeadGeometry.swift` | **Nuevo**: geometría de cabeza/ojos extraída verbatim |
+| `NotchBuddy/Sources/App/FlowHubNotes.swift` | `HubLiveMochi` sin `outfit: .roundGlasses` |
+| `NotchBuddy/Sources/App/IslandViewContent.swift` | Comentario del guardarropa sin mencionar `Outfit` |
+| `.github/workflows/build.yml` | Paso `Wardrobe tests` eliminado |
+| + 6 borrados (§10.4) | Ver tabla |

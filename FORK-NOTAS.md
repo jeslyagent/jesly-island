@@ -347,3 +347,70 @@ minis 30, flotante/Flow Hub 60.
 `SmokeCloudView.swift`, `BotCanvasView.swift` (+ docs). Balance 0 en
 los 2; llamadores viejos (`DesktopMochi`, `FlowHubMochis`) intactos por
 el valor por defecto. **Sin compilar: solo la Mac lo confirma.**
+
+## FASE 2, SESIÓN 5 — Flow Hub sin Mochis + outfit borrado (2026-11-27, local, SIN pushear, SIN compilar)
+
+Sesión 4 verificada en vivo antes de empezar (13:38 AST: tras BUILD FAILED
+por proyecto Xcode viejo y limpiar con Shift+Cmd+K, la nube se ve completa
+en el notch cerrado).
+
+### 1. Flow Hub sin Mochis
+
+- `FlowHubMochis.swift` (531 → 338 l.): borrados `HubMochiSpec`,
+  `HubMochiTroupe` (+ `Walker`) y `HubMochiScene` (tropa que caminaba con
+  `BotEngine.draw`, emotes y `poke`). `HubHero` queda como banda de color +
+  título + subtítulo + acción, con su fondo de partículas (que ya parecían
+  nube de puntos); el `Spacer(minLength: 290/350)` que reservaba sitio a la
+  tropa pasa a `Spacer()`. API intacta: los 3 llamadores no se tocaron.
+- `HubHeroTheme`: solo color por página (mismos colores, sin `cast`).
+- `HubLiveMochi`: sin parámetro `outfit`; `FlowHubNotes.swift:207` deja de
+  pasar `outfit: .roundGlasses`.
+
+### 2. BotEngine destripado del outfit
+
+Borrados `outfit`, `outfitPresence`, `outfitTarget`, `setOutfit` (no-op
+desde sesión 3), `drawOutfitBehind`, `drawOutfitFront` (ya eran código
+muerto: `draw()` nunca los llamaba), `outfitFollowsRoll`, los casos
+`"outfitPresence"` de `setProperty`/`getProperty`, y el impulso
+centrífugo (`centrifugal` + `rollVel` + `prevRoll`). `pumpkinColors` →
+`false`; ojos con `+ roll` directo (sin `rigidRoll`).
+
+### 3. Hallazgo: MochiOutfitDrawing.swift NO era solo ropa
+
+El archivo guardaba también la geometría de cabeza/ojos que
+`BotEngine.drawEyes` necesita (`MochiH`, `EyeFrame`, `mEyeFrames`).
+Borrarlo a ciegas habría roto los ojos de Mochi. La geometría se extrajo
+verbatim a `NotchBuddy/Sources/CoucouKit/MochiHeadGeometry.swift`
+(verificado por `diff` contra las líneas 1–77 del original; fuera solo
+`kEXP` y `kACC_PITCH`, que solo usaban los helpers 3D del outfit).
+
+### 4. Archivos borrados (6 + 2 de tooling)
+
+`MochiOutfitDrawing.swift`, `MochiWardrobe.swift` (tipo `Outfit`),
+`tests/MochiWardrobeTests.swift`, `scripts/test-wardrobe.sh`,
+`scripts/RenderOutfits.swift`, `scripts/render-outfits.sh` (render de
+planchas de outfits, fuera de CI). Además `.github/workflows/build.yml`
+pierde el paso `Wardrobe tests` (único sitio de CI que corría ese script;
+YAML validado).
+
+### 5. Condición de borrado: CUMPLIDA en el ámbito Mac
+
+Grep `Outfit`/`setOutfit`/`drawOutfit` en `NotchBuddy/Sources` + `tests/`
++ `scripts/` + `.github/`: **0 en código** (solo 2 comentarios de
+documento). Balance 0 en los 5 Swift tocados. **Sin compilar: solo la
+Mac lo confirma.**
+
+Fuera del grep (a propósito, no tocado): ropa de Android (Kotlin) y
+Windows (TS), `CHANGELOG.md:441` (historia), valores muertos de nombres
+de ropa en `Localizable.xcstrings`, y `project.pbxproj` (trackeado,
+generado por XcodeGen) que todavía referencia los 6 borrados hasta que
+JC corra `xcodegen` en su Mac — imprescindible en la verificación, junto
+con Shift+Cmd+K (lección de la sesión 4).
+
+### 6. Qué queda de Mochi
+
+`MochiRoom`/`FlowHubRoom`, `MochiStill`, `MochiMood`, `BotEngine`
+(sigue dibujando a Mochi en habitación, pills y resumen semanal), 29 WAV,
+`whats-new.json`: intactos por decisión del encargo. `WardrobeView`
+sigue como aviso y la ruta `.wardrobe` sigue existiendo. `PRODUCT_NAME`
++ bundle id + firmado: NO tocados (ver README-FASE2 §8).

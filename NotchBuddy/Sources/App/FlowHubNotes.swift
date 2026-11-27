@@ -204,7 +204,7 @@ private struct HubNotesSetup: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HubLiveMochi(color: "#3B9EFF", size: 54, outfit: .roundGlasses)
+            HubLiveMochi(color: "#3B9EFF", size: 54)
                 .frame(height: 50)
             HubCard(padding: 20) {
                 Text("notes.setup-title")
