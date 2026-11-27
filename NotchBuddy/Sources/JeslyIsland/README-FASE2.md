@@ -1,7 +1,9 @@
-# README-FASE2 — JESLY Island, Fase 2 sesión 1
+# README-FASE2 — JESLY Island, Fase 2 sesiones 1–2
 
-Fecha: 2026-11-27. Estado: **sesión 1 hecha, SIN pushear, SIN compilar.**
-Base: fork `jeslyagent/jesly-island`, HEAD remoto `62ced5b2` (Fase 1).
+Fecha: 2026-11-27. Estado: **sesión 1 pusheada y VERIFICADA EN VIVO en la Mac de JC
+(commit `55708958`, BUILD SUCCEEDED 12:28 AST, app abre desde Aplicaciones y queda
+abierta sin Xcode). Sesión 2 hecha en local, SIN pushear, SIN compilar.**
+Base: fork `jeslyagent/jesly-island`, HEAD remoto `55708958` (sesión 1).
 Plan: `~/workspace/jarvis/COUCOU-FORK-PLAN.md` §5 mapa G y §6.
 
 ## 1. Personaje portado (la nube de puntos, ya en el árbol)
@@ -24,9 +26,17 @@ type: group` (con excludes solo para `Phone/**`, `Widgets/**`,
 `NotificationContent/**`), así que `Sources/JeslyIsland/Character/` entra
 en el build al correr `xcodegen` — no hizo falta tocar `project.yml` para esto.
 
-**NO está conectado todavía.** Ninguna vista de Coucou usa `SmokeCloudView`;
-Mochi sigue dibujándose en todas partes. Conectar es la sesión 2 (ver mapa
-abajo). La isla JESLY actual (`Jesly-agent-ai`, `apps/island/`) NO se tocó.
+**Conectado en sesión 2 (un solo sitio, el Flow Hub):** `HubLiveMochi`
+(`FlowHubMochis.swift:215`) ya no dibuja un mini Mochi: su cuerpo es
+`SmokeCloudView(size: size)`. Mantiene su API (`color`, `size`, `state`,
+`outfit`) para no tocar a sus 3 llamadores, que heredan la nube gratis:
+`FlowHub.swift:277` (cabecera, 28 pt), `HubEmptyState` (54 pt) y
+`FlowHubNotes.swift:207` (54 pt). `color` y `outfit` se ignoran (la nube es
+blanca y no tiene ropa); `BotState` no tiene caso `.listening`, así que la
+sonrisa de escucha no se usa aquí todavía. El resto de Mochi sigue
+dibujándose (ver §2 y sesión 2 abajo): la isla animada (`BotCanvasView`),
+el flotante (`DesktopMochi`), las escenas del Flow Hub (`HubMochiScene` /
+`HubHero`) y los `MochiStill` de Phone/Widgets.
 
 Qué hace el personaje (de su propio código): respiración 3 s ±3%,
 parpadeo cada 4 s (0,12 s), pupilas que siguen el cursor (máx. 4 pt),
@@ -122,17 +132,54 @@ Medido 2026-11-27 (sin `.git`): `mochi` 3.939 ocurrencias en 400 archivos;
 - `NSError(domain: "Coucou", …)` en `HookServer.swift` (12×): dominio de
   error, no texto visible; dejar para la sesión del hook.
 
-## 5. Sesión 2 — lista de trabajo
+## 5. Sesión 2 — hecho 2026-11-27 (local, sin pushear, sin compilar)
 
-1. En la Mac: `git pull` del fork, `xcodegen`, `Cmd+R` — confirmar que la
-   sesión 1 compila (debe: solo cambiaron cadenas y metadatos + 2 archivos
-   nuevos sin usar).
-2. Conectar `SmokeCloudView` en: `BotCanvasView` / isla (`MochiStill`),
-   `DesktopMochi` (flotante 120 pt), `FlowHubMochis` (`HubLiveMochi`).
-3. Borrar `MochiOutfitDrawing.swift` (1.464 l.) y `MochiWardrobe.swift`,
-   y reescribir/borrar sus tests. Luego `MochiStill` y `MochiMood`.
-4. `Localizable.xcstrings`: valores en inglés `Mochi` → `JESLY`,
-   `Coucou` → `JESLY` (sin tocar claves).
-5. `PRODUCT_NAME` + los 3 scripts de `Coucou.app`.
-6. Verificar en vivo: la isla muestra la nube, el flotante muestra la nube,
-   ningún texto visible dice Coucou ni Mochi.
+1. ✅ **Nube conectada en un solo sitio: `HubLiveMochi`** (Flow Hub: cabecera,
+   estados vacíos y notas). Ver §1. El resto queda para la sesión 3.
+2. ❌ **NO se borraron `MochiOutfitDrawing.swift` ni `MochiWardrobe.swift`**,
+   a propósito, pese a que el plan lo pedía: el grep exhaustivo demostró que
+   NO se cumple la condición de borrado. `Outfit` tiene **95 referencias en
+   7 archivos** (`AppState.resolvedOutfit` + `mochiOutfitSelection`,
+   `BotEngine.setOutfit`/`outfit`/`drawOutfitBehind`/`drawOutfitFront`,
+   `BotCanvasView`, `DesktopMochi`, `FlowHubMochis`, `IslandViewContent`
+   con el selector de guardarropa ~l. 4715–4830, y los tests
+   `tests/MochiWardrobeTests.swift` + `scripts/test-wardrobe.sh`).
+   `drawOutfitBehindStatic`/`drawOutfitFrontStatic` (definidos en
+   `MochiOutfitDrawing.swift`) tienen 6 llamadores en `BotEngine` e
+   `IslandViewContent`. Borrar los archivos sin reescribir todo eso rompe
+   el build con certeza. Sesión 3, con build en la Mac: convertir
+   `setOutfit` en no-op, quitar el selector de guardarropa y `resolvedOutfit`,
+   y solo entonces borrar los 2 archivos + sus tests.
+3. ✅ **`Localizable.xcstrings`: 100 valores en inglés** `Coucou`/`Mochi` →
+   `JESLY` (script línea a línea, `/tmp/fase2s2-xcstrings.py`; diff exacto:
+   100 líneas cambiadas). Claves intactas (1.149), otros 15 idiomas intactos,
+   JSON válido. Quedan 14 hits en inglés, todos intencionados: 3
+   `Coucoudoro` (nombre de función), `whatsnew.botan` (historia),
+   `whatsapp.autostart.hint` y `alert.hooks.body` (rutas reales
+   `Application Support/Coucou`, `~/.claude/coucou/nb-hook`), 4 rutas de
+   plugins (`~/.hermes/plugins/coucou/`, `~/.config/amp/plugins/coucou.ts`,
+   `~/.copilot/hooks/coucou.json`, `~/.config/opencode/plugins/coucou.js`),
+   y la frase de activación `« OK Coucou »` (2 claves + `voice.setting-web-desc`).
+   Feo conocido: `voice.setting-web` dice ahora "Claude as JESLY's brain" —
+   el texto es de la función de voz de Coucou; se corrige en Fase 4 cuando
+   la voz pase a la API de JESLY. La clave `"Coucou"` no tiene localización
+   `en` (solo ja/ko/th/zh-Hant): su valor es la propia clave y no se tocó.
+4. ❌ **`PRODUCT_NAME` + 3 scripts: APLAZADO a la sesión 3.** Cambiar
+   `Coucou` → `JeslyIsland` en `project.yml:178` exige cambiar
+   `scripts/cloud-test-build.sh` (`APP=.../Coucou.app`,
+   `PROFILE_NAME="Coucou Developer ID"`, `CONTAINER=iCloud.fr.louisraille.Coucou`),
+   `scripts/dev-install.sh` (`BUILT=.../Coucou.app`, `TARGET=/Applications/Coucou.app`,
+   `pgrep -x Coucou`) y `scripts/release.sh` (`APP`, `ZIP`, grep de
+   entitlements `iCloud.fr.louisraille.Coucou`, título de release) — pero los
+   dos primeros scripts dependen de la identidad de firmado y del contenedor
+   iCloud de Louis Raillé, que NO cambian en esta fase (bundle id y
+   entitlements intactos). Renombrar el producto sin su identidad de firmado
+   es el cambio con más riesgo de romper el build en la nube; va junto con
+   la decisión de bundle id, con build en la Mac para verificar.
+5. ⏳ Sesión 3: build de la sesión 2 en la Mac; isla animada (`BotCanvasView`
+   → nube) y flotante (`DesktopMochi` → `SmokeCloudView(size: 120)`);
+   escenas `HubMochiScene`/`HubHero`; quitar `Outfit` y borrar los 2 archivos;
+   `PRODUCT_NAME` + scripts; `AndroidLinkProtocol.swift:140` (nombre de
+   instancia por defecto `"Coucou"` si el Mac no tiene nombre).
+
+## 6. (antes §5) Sesión 2 — lista de trabajo original

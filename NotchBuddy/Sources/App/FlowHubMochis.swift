@@ -205,7 +205,13 @@ struct HubMochiScene: View {
     }
 }
 
-/// One Mochi that stays where it is (the logo, the empty pages).
+/// One JESLY cloud that stays where it is (the logo, the empty pages).
+/// Fase 2, sesión 2: `HubLiveMochi` keeps its call-site API (color/state/outfit
+/// params) so existing callers don't change, but it now draws `SmokeCloudView`
+/// instead of a mini Mochi (`HubMochiScene` + `BotEngine`). The cloud is
+/// white by design, so `color` is ignored; JESLY has no outfits, so `outfit`
+/// is ignored. `BotState` has no `.listening` case (listening is a `BotEmote`),
+/// so the cloud never shows the listening smile here yet.
 struct HubLiveMochi: View {
     var color = "#F5F6F8"
     /// Width of the body; the drawing around it is larger.
@@ -214,8 +220,7 @@ struct HubLiveMochi: View {
     var outfit: Outfit = .none
 
     var body: some View {
-        HubMochiScene(cast: [HubMochiSpec(color: color, size: size / 0.68, outfit: outfit, state: state, roams: false)])
-            .frame(width: size / 0.68, height: size / 0.68)
+        SmokeCloudView(size: size)
             .frame(width: size, height: size * 0.75)
     }
 }

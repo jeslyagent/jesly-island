@@ -2033,7 +2033,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou is not allowed to control Mail. Allow it in Privacy & Security → Automation."
+            "value" : "JESLY is not allowed to control Mail. Allow it in Privacy & Security → Automation."
           }
         },
         "es" : {
@@ -3851,7 +3851,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nothing sorted yet. What Coucou does to your messages shows up here, with an Undo."
+            "value" : "Nothing sorted yet. What JESLY does to your messages shows up here, with an Undo."
           }
         },
         "es" : {
@@ -3952,7 +3952,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld new messages checked today. None matched a VIP, a banned word or a rule, so Coucou left them as they are."
+            "value" : "%lld new messages checked today. None matched a VIP, a banned word or a rule, so JESLY left them as they are."
           }
         },
         "es" : {
@@ -4356,7 +4356,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou sorts your Apple Mail inboxes: VIPs first, then banned words, then your rules. It never deletes a message."
+            "value" : "JESLY sorts your Apple Mail inboxes: VIPs first, then banned words, then your rules. It never deletes a message."
           }
         },
         "es" : {
@@ -5164,7 +5164,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "If a message matches, Coucou does the action. The first rule that matches wins; VIPs and banned words come before."
+            "value" : "If a message matches, JESLY does the action. The first rule that matches wins; VIPs and banned words come before."
           }
         },
         "es" : {
@@ -5265,7 +5265,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sent by Coucou"
+            "value" : "Sent by JESLY"
           }
         },
         "es" : {
@@ -8699,7 +8699,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou could not read the plan: %@"
+            "value" : "JESLY could not read the plan: %@"
           }
         },
         "es" : {
@@ -10719,7 +10719,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Buy Mochi a coffee"
+            "value" : "Buy JESLY a coffee"
           }
         },
         "es" : {
@@ -10921,7 +10921,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your Coucou so far"
+            "value" : "Your JESLY so far"
           }
         },
         "es" : {
@@ -11729,7 +11729,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou is free and open source. If it saves you time, you can buy Mochi a coffee."
+            "value" : "JESLY is free and open source. If it saves you time, you can buy JESLY a coffee."
           }
         },
         "es" : {
@@ -11830,7 +11830,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You’re on Coucou %@"
+            "value" : "You’re on JESLY %@"
           }
         },
         "es" : {
@@ -12537,7 +12537,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "For regular chats in the Claude app, which run no hook. When you leave Claude while it is writing, Coucou checks once a second, through Accessibility, whether its Stop button is still there. Nothing of the chat is read."
+            "value" : "For regular chats in the Claude app, which run no hook. When you leave Claude while it is writing, JESLY checks once a second, through Accessibility, whether its Stop button is still there. Nothing of the chat is read."
           }
         },
         "es" : {
@@ -12638,7 +12638,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allow Coucou in System Settings › Privacy & Security › Accessibility."
+            "value" : "Allow JESLY in System Settings › Privacy & Security › Accessibility."
           }
         },
         "es" : {
@@ -12840,7 +12840,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mochi jumps when a chat reply is ready"
+            "value" : "JESLY jumps when a chat reply is ready"
           }
         },
         "es" : {
@@ -13042,7 +13042,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mochi checks Coucou’s releases on GitHub a few times a day and tells you when one is out. Nothing about you is sent."
+            "value" : "JESLY checks JESLY’s releases on GitHub a few times a day and tells you when one is out. Nothing about you is sent."
           }
         },
         "es" : {
@@ -13648,7 +13648,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The download isn’t the announced version of Coucou. Nothing was changed."
+            "value" : "The download isn’t the announced version of JESLY. Nothing was changed."
           }
         },
         "es" : {
@@ -13749,7 +13749,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Installed: quit and reopen Coucou to use the new version."
+            "value" : "Installed: quit and reopen JESLY to use the new version."
           }
         },
         "es" : {
@@ -13850,7 +13850,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The download isn’t signed and notarized by Coucou’s developer, so it wasn’t installed."
+            "value" : "The download isn’t signed and notarized by JESLY’s developer, so it wasn’t installed."
           }
         },
         "es" : {
@@ -14355,7 +14355,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou isn’t in your Applications folder, so it can’t replace itself: get the new version on GitHub."
+            "value" : "JESLY isn’t in your Applications folder, so it can’t replace itself: get the new version on GitHub."
           }
         },
         "es" : {
@@ -14456,7 +14456,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Update Coucou to %@…"
+            "value" : "Update JESLY to %@…"
           }
         },
         "es" : {
@@ -14759,7 +14759,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Restarting Coucou…"
+            "value" : "Restarting JESLY…"
           }
         },
         "es" : {
@@ -14961,7 +14961,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou looks at its own releases on GitHub a few times a day. An update is installed only after your click, once Apple’s signature and notarization check out."
+            "value" : "JESLY looks at its own releases on GitHub a few times a day. An update is installed only after your click, once Apple’s signature and notarization check out."
           }
         },
         "es" : {
@@ -15466,7 +15466,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou %@ is out"
+            "value" : "JESLY %@ is out"
           }
         },
         "es" : {
@@ -15567,7 +15567,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou is up to date"
+            "value" : "JESLY is up to date"
           }
         },
         "es" : {
@@ -16463,7 +16463,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou downloads GOWA, the open-source gateway, from its GitHub page (about 15 MB, once), checks it and starts it. Then scan the QR code with your phone. No Terminal needed."
+            "value" : "JESLY downloads GOWA, the open-source gateway, from its GitHub page (about 15 MB, once), checks it and starts it. Then scan the QR code with your phone. No Terminal needed."
           }
         },
         "es" : {
@@ -16795,7 +16795,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gateway GOWA %@ installed, started by Coucou"
+            "value" : "Gateway GOWA %@ installed, started by JESLY"
           }
         },
         "es" : {
@@ -18556,7 +18556,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "macOS doesn’t let this build of Coucou read the Focus state yet: messages still arrive, Mochi keeps reacting."
+            "value" : "macOS doesn’t let this build of JESLY read the Focus state yet: messages still arrive, JESLY keeps reacting."
           }
         },
         "es" : {
@@ -19801,7 +19801,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou’s webhook port"
+            "value" : "JESLY’s webhook port"
           }
         },
         "es" : {
@@ -19884,7 +19884,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou only talks to the gateway on this Mac. Messages stay in memory, are never logged or saved, and are forgotten when Coucou quits. No photo or media is ever downloaded."
+            "value" : "JESLY only talks to the gateway on this Mac. Messages stay in memory, are never logged or saved, and are forgotten when JESLY quits. No photo or media is ever downloaded."
           }
         },
         "es" : {
@@ -21562,7 +21562,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The gateway refused Coucou’s address (%@). Checking every 20 s instead."
+            "value" : "The gateway refused JESLY’s address (%@). Checking every 20 s instead."
           }
         },
         "es" : {
@@ -24158,7 +24158,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mochi and your Mac"
+            "value" : "JESLY and your Mac"
           }
         },
         "es" : {
@@ -24259,7 +24259,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mochi reacts to your Mac"
+            "value" : "JESLY reacts to your Mac"
           }
         },
         "es" : {
@@ -24360,7 +24360,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "He sweats when the processor is at full load, flushes when the Mac is hot, puffs up when memory is short and gets sleepy when the battery is low. Point at Mochi to see why. Read only while Mochi is on screen; nothing leaves your Mac."
+            "value" : "He sweats when the processor is at full load, flushes when the Mac is hot, puffs up when memory is short and gets sleepy when the battery is low. Point at JESLY to see why. Read only while JESLY is on screen; nothing leaves your Mac."
           }
         },
         "es" : {
@@ -25370,7 +25370,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose a zone (Space for a window): Mochi takes it into the island to paste, annotate or ask Claude."
+            "value" : "Choose a zone (Space for a window): JESLY takes it into the island to paste, annotate or ask Claude."
           }
         },
         "es" : {
@@ -25471,7 +25471,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allow Coucou in System Settings → Privacy & Security → Screen Recording, then capture again."
+            "value" : "Allow JESLY in System Settings → Privacy & Security → Screen Recording, then capture again."
           }
         },
         "es" : {
@@ -25976,7 +25976,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Captured. Mochi has it."
+            "value" : "Captured. JESLY has it."
           }
         },
         "es" : {
@@ -27877,7 +27877,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou can't paste yet, or see Esc: it needs the Accessibility permission. Turn on Coucou in System Settings → Privacy & Security → Accessibility. If it is already on, remove it with − and add it again: a new build of Coucou needs it again."
+            "value" : "JESLY can't paste yet, or see Esc: it needs the Accessibility permission. Turn on JESLY in System Settings → Privacy & Security → Accessibility. If it is already on, remove it with − and add it again: a new build of JESLY needs it again."
           }
         },
         "es" : {
@@ -27978,7 +27978,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Accessibility allowed: Coucou pastes where you type."
+            "value" : "Accessibility allowed: JESLY pastes where you type."
           }
         },
         "es" : {
@@ -28382,7 +28382,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou can't hear you: the microphone is not allowed or not available."
+            "value" : "JESLY can't hear you: the microphone is not allowed or not available."
           }
         },
         "es" : {
@@ -28483,7 +28483,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou couldn't paste: your words are copied. Press ⌘V, and allow Accessibility so it pastes for you."
+            "value" : "JESLY couldn't paste: your words are copied. Press ⌘V, and allow Accessibility so it pastes for you."
           }
         },
         "es" : {
@@ -29493,7 +29493,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Videos, music and calls go quiet while Coucou listens, then the sound comes back."
+            "value" : "Videos, music and calls go quiet while JESLY listens, then the sound comes back."
           }
         },
         "es" : {
@@ -32220,7 +32220,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your voice is turned into text by your Mac's speech recognition, on-device when your Mac supports it; Coucou sends it nowhere. After pasting, the clipboard gets back what it held."
+            "value" : "Your voice is turned into text by your Mac's speech recognition, on-device when your Mac supports it; JESLY sends it nowhere. After pasting, the clipboard gets back what it held."
           }
         },
         "es" : {
@@ -32624,7 +32624,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open Coucou"
+            "value" : "Open JESLY"
           }
         },
         "es" : {
@@ -33937,7 +33937,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Names and words Coucou must always spell right."
+            "value" : "Names and words JESLY must always spell right."
           }
         },
         "es" : {
@@ -34240,7 +34240,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Until Parakeet is downloaded, Coucou uses your Mac's speech recognition."
+            "value" : "Until Parakeet is downloaded, JESLY uses your Mac's speech recognition."
           }
         },
         "es" : {
@@ -36563,7 +36563,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou Flow…"
+            "value" : "JESLY Flow…"
           }
         },
         "es" : {
@@ -36765,7 +36765,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Claude Code, Codex and the other agents Mochi follows."
+            "value" : "Claude Code, Codex and the other agents JESLY follows."
           }
         },
         "es" : {
@@ -36967,7 +36967,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mochi, his sounds and how the notch behaves."
+            "value" : "JESLY, his sounds and how the notch behaves."
           }
         },
         "es" : {
@@ -37371,7 +37371,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "« OK Coucou », Mochi's voice and the dictation key."
+            "value" : "« OK Coucou », JESLY's voice and the dictation key."
           }
         },
         "es" : {
@@ -37775,7 +37775,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open Coucou Flow"
+            "value" : "Open JESLY Flow"
           }
         },
         "es" : {
@@ -39189,7 +39189,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "When Coucou hears the words on the left, it writes the ones on the right."
+            "value" : "When JESLY hears the words on the left, it writes the ones on the right."
           }
         },
         "es" : {
@@ -40401,7 +40401,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show Coucou in the Dock"
+            "value" : "Show JESLY in the Dock"
           }
         },
         "es" : {
@@ -40502,7 +40502,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open Coucou like any app; a click on its icon brings this window back. Off, Coucou lives in the menu bar only."
+            "value" : "Open JESLY like any app; a click on its icon brings this window back. Off, JESLY lives in the menu bar only."
           }
         },
         "es" : {
@@ -41310,7 +41310,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open this window when you open Coucou"
+            "value" : "Open this window when you open JESLY"
           }
         },
         "es" : {
@@ -41815,7 +41815,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The history, the statistics and your notes stay on this Mac, in Coucou's folder. Dictations are never saved as audio; a call's audio is deleted as soon as its transcript is written."
+            "value" : "The history, the statistics and your notes stay on this Mac, in JESLY's folder. Dictations are never saved as audio; a call's audio is deleted as soon as its transcript is written."
           }
         },
         "es" : {
@@ -42623,7 +42623,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The text Coucou pastes"
+            "value" : "The text JESLY pastes"
           }
         },
         "es" : {
@@ -42825,7 +42825,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Say the trigger while dictating: Coucou pastes the whole text in its place."
+            "value" : "Say the trigger while dictating: JESLY pastes the whole text in its place."
           }
         },
         "es" : {
@@ -45754,7 +45754,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No word yet. Add the names, brands and jargon Coucou gets wrong."
+            "value" : "No word yet. Add the names, brands and jargon JESLY gets wrong."
           }
         },
         "es" : {
@@ -47471,7 +47471,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou can't use the microphone. Allow it in System Settings → Privacy & Security → Microphone."
+            "value" : "JESLY can't use the microphone. Allow it in System Settings → Privacy & Security → Microphone."
           }
         },
         "es" : {
@@ -47572,7 +47572,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Download the models in Coucou Flow → Settings first."
+            "value" : "Download the models in JESLY Flow → Settings first."
           }
         },
         "es" : {
@@ -48986,7 +48986,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou is writing the transcript, person by person…"
+            "value" : "JESLY is writing the transcript, person by person…"
           }
         },
         "es" : {
@@ -49491,7 +49491,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou writes your calls on your Mac with Parakeet, and tells the voices apart with a second small model. Both are downloaded once (about 650 MB), then everything works offline."
+            "value" : "JESLY writes your calls on your Mac with Parakeet, and tells the voices apart with a second small model. Both are downloaded once (about 650 MB), then everything works offline."
           }
         },
         "es" : {
@@ -51886,7 +51886,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Install Coucou hooks in ~/.claude?"
+            "value" : "Install JESLY hooks in ~/.claude?"
           }
         },
         "es" : {
@@ -52086,7 +52086,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allow Coucou to control Music"
+            "value" : "Allow JESLY to control Music"
           }
         },
         "es" : {
@@ -52186,7 +52186,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allow Coucou to control Spotify"
+            "value" : "Allow JESLY to control Spotify"
           }
         },
         "es" : {
@@ -55471,7 +55471,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose the tools you use. Coucou only shows what you declare here."
+            "value" : "Choose the tools you use. JESLY only shows what you declare here."
           }
         },
         "es" : {
@@ -59182,7 +59182,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Drop a file named like one of Mochi's sounds (finish.wav, approval.mp3, greet.m4a…) in the sounds folder to replace it, then Reload."
+            "value" : "Drop a file named like one of JESLY's sounds (finish.wav, approval.mp3, greet.m4a…) in the sounds folder to replace it, then Reload."
           }
         },
         "es" : {
@@ -60774,7 +60774,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "In a corner, Coucou floats over your desktop and opens from there. You can also drag Mochi near a corner of the screen, or back to the top centre."
+            "value" : "In a corner, JESLY floats over your desktop and opens from there. You can also drag JESLY near a corner of the screen, or back to the top centre."
           }
         },
         "es" : {
@@ -62030,7 +62030,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Before Antigravity runs a shell command that none of its rules covers, the notch asks you first: Allow, Deny or Reply in terminal. Antigravity waits up to 2 min, then asks in its terminal. Coucou can't see Antigravity's mode, so in Auto mode the notch also asks about commands Antigravity would have run on its own."
+            "value" : "Before Antigravity runs a shell command that none of its rules covers, the notch asks you first: Allow, Deny or Reply in terminal. Antigravity waits up to 2 min, then asks in its terminal. JESLY can't see Antigravity's mode, so in Auto mode the notch also asks about commands Antigravity would have run on its own."
           }
         },
         "es" : {
@@ -62130,7 +62130,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Click Install hooks once more, then restart Antigravity: hooks from an older Coucou don't let it wait for your answer."
+            "value" : "Click Install hooks once more, then restart Antigravity: hooks from an older JESLY don't let it wait for your answer."
           }
         },
         "es" : {
@@ -64730,7 +64730,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "An instruction sent from the iPhone uses the model open in chat. The system prompt and conversation history apply. Instructions sent when Coucou is not running are queued and executed on next launch."
+            "value" : "An instruction sent from the iPhone uses the model open in chat. The system prompt and conversation history apply. Instructions sent when JESLY is not running are queued and executed on next launch."
           }
         },
         "es" : {
@@ -64930,7 +64930,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Goes through the Coucou relay to Apple's push service. Only the agent name and state are sent: no project name, command, or path."
+            "value" : "Goes through the JESLY relay to Apple's push service. Only the agent name and state are sent: no project name, command, or path."
           }
         },
         "es" : {
@@ -65030,7 +65030,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Move Mochi to my iPhone's Dynamic Island when my Mac is locked"
+            "value" : "Move JESLY to my iPhone's Dynamic Island when my Mac is locked"
           }
         },
         "es" : {
@@ -65130,7 +65130,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sends your sessions to your private iCloud for the Coucou app on iPhone. Project names, commands, and questions are encrypted with your iCloud keys. Disabling removes data from iCloud."
+            "value" : "Sends your sessions to your private iCloud for the JESLY app on iPhone. Project names, commands, and questions are encrypted with your iCloud keys. Disabling removes data from iCloud."
           }
         },
         "es" : {
@@ -71722,7 +71722,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show Mochi on"
+            "value" : "Show JESLY on"
           }
         },
         "es" : {
@@ -72506,7 +72506,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open Coucou"
+            "value" : "Open JESLY"
           }
         },
         "es" : {
@@ -74407,7 +74407,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Shows your Claude plan usage (5-hour and weekly limits) in the notch header. Coucou adds a status line relay in ~/.claude/settings.json. If you already have a status line, it keeps working as before. Pro and Max plans only."
+            "value" : "Shows your Claude plan usage (5-hour and weekly limits) in the notch header. JESLY adds a status line relay in ~/.claude/settings.json. If you already have a status line, it keeps working as before. Pro and Max plans only."
           }
         },
         "es" : {
@@ -76607,7 +76607,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Approval requests appear in the notch. If Coucou is not running, Hermes falls back to its own prompt."
+            "value" : "Approval requests appear in the notch. If JESLY is not running, Hermes falls back to its own prompt."
           }
         },
         "es" : {
@@ -79115,7 +79115,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Public address only. Coucou never touches your private keys."
+            "value" : "Public address only. JESLY never touches your private keys."
           }
         },
         "es" : {
@@ -82784,7 +82784,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Restart Coucou"
+            "value" : "Restart JESLY"
           }
         },
         "es" : {
@@ -84240,7 +84240,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Settings — Coucou"
+            "value" : "Settings — JESLY"
           }
         },
         "es" : {
@@ -84840,7 +84840,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mochi to desktop on/off"
+            "value" : "JESLY to desktop on/off"
           }
         },
         "es" : {
@@ -86941,7 +86941,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Talk to Coucou"
+            "value" : "Talk to JESLY"
           }
         },
         "es" : {
@@ -94546,7 +94546,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou answers in"
+            "value" : "JESLY answers in"
           }
         },
         "es" : {
@@ -97656,7 +97656,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou responds aloud"
+            "value" : "JESLY responds aloud"
           }
         },
         "es" : {
@@ -97757,7 +97757,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coucou reads back results in the spoken language, using a synthesized voice. 100% on-device."
+            "value" : "JESLY reads back results in the spoken language, using a synthesized voice. 100% on-device."
           }
         },
         "es" : {
@@ -98161,7 +98161,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Claude as Coucou's brain"
+            "value" : "Claude as JESLY's brain"
           }
         },
         "es" : {
@@ -98262,7 +98262,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "After «OK Coucou», what you say goes to Claude with your Anthropic API key, with what Coucou reads to answer (your pills, your services' data, a contact's address). It acts and searches the web. Never audio."
+            "value" : "After «OK Coucou», what you say goes to Claude with your Anthropic API key, with what JESLY reads to answer (your pills, your services' data, a contact's address). It acts and searches the web. Never audio."
           }
         },
         "es" : {
@@ -100274,7 +100274,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "When enabled, Coucou listens for the wake word « OK Coucou ». Speech recognition runs entirely on-device — no audio or transcript leaves your Mac."
+            "value" : "When enabled, JESLY listens for the wake word « OK Coucou ». Speech recognition runs entirely on-device — no audio or transcript leaves your Mac."
           }
         },
         "es" : {
@@ -101089,7 +101089,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Chat on the plan you already pay for. Coucou asks your AI's official terminal tool, signed in with your own account: it never sees your password or your key."
+            "value" : "Chat on the plan you already pay for. JESLY asks your AI's official terminal tool, signed in with your own account: it never sees your password or your key."
           }
         },
         "es" : {
@@ -102220,7 +102220,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Link with Coucou for Android"
+            "value" : "Link with JESLY for Android"
           }
         },
         "es" : {
@@ -102320,7 +102320,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lets Coucou for Android, on the same Wi-Fi, see your agent sessions and answer permission requests. Off by default. Coucou listens on your local network only while this is on."
+            "value" : "Lets JESLY for Android, on the same Wi-Fi, see your agent sessions and answer permission requests. Off by default. JESLY listens on your local network only while this is on."
           }
         },
         "es" : {
@@ -102920,7 +102920,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scan this code with Coucou for Android, or paste the link into the app."
+            "value" : "Scan this code with JESLY for Android, or paste the link into the app."
           }
         },
         "es" : {
@@ -104729,7 +104729,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Copied: paste it in the session with ⌘V (Coucou needs Accessibility to do it for you)."
+            "value" : "Copied: paste it in the session with ⌘V (JESLY needs Accessibility to do it for you)."
           }
         },
         "es" : {
@@ -104812,7 +104812,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mochi's room"
+            "value" : "JESLY's room"
           }
         },
         "fr" : {
@@ -104913,7 +104913,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mochi and your agents live here. Every object is live data from Coucou and your tools."
+            "value" : "JESLY and your agents live here. Every object is live data from JESLY and your tools."
           }
         },
         "fr" : {
@@ -105115,7 +105115,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The desk: Mochi works there while an agent runs."
+            "value" : "The desk: JESLY works there while an agent runs."
           }
         },
         "fr" : {
@@ -105216,7 +105216,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The door: Mochi waits there when an agent asks something, and you answer right here."
+            "value" : "The door: JESLY waits there when an agent asks something, and you answer right here."
           }
         },
         "fr" : {
@@ -105519,7 +105519,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The plant grows with your streak. When nothing runs, Mochi naps on the bed."
+            "value" : "The plant grows with your streak. When nothing runs, JESLY naps on the bed."
           }
         },
         "fr" : {
@@ -106024,7 +106024,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mochi goes to the door"
+            "value" : "JESLY goes to the door"
           }
         },
         "fr" : {
