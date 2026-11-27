@@ -52,9 +52,9 @@ struct ServiceSnapshot: Codable, Equatable, Sendable {
 
 extension PillCatalog {
     /// The service Mochi the iPhone shows, in this order.
+    // Fase 5, sesión 3: solo quedan las pills que siguen en el catálogo.
     static let phoneServices = [
-        "integration_github", "integration_stripe", "integration_vercel", "integration_resend",
-        "integration_calcom", "integration_n8n", "integration_notion",
+        "integration_github", "integration_vercel",
     ]
 
     /// Agent sessions (VS Code, Cursor, Codex…), as opposed to services and chat providers.

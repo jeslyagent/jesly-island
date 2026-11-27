@@ -19,10 +19,6 @@ final class MusicController: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let queue = DispatchQueue(label: "fr.louisraille.coucou.music")
 
-    private var isPillActive: Bool {
-        AppState.shared.activeIntegrations.contains("integration_music")
-    }
-
     private init() {
         // playerInfo fires whenever Music state changes (play/pause/track change).
         // Extract Sendable String? values before crossing into @MainActor.
@@ -53,8 +49,7 @@ final class MusicController: ObservableObject {
             guard bundleId == "com.apple.Music" else { return }
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                guard self.isPillActive,
-                      UserDefaults.standard.bool(forKey: "coucou.musicAutomationGranted") else { return }
+                guard UserDefaults.standard.bool(forKey: "coucou.musicAutomationGranted") else { return }
                 self.fetchAndApply()
             }
         }
@@ -73,20 +68,6 @@ final class MusicController: ObservableObject {
         }
         notifTokens.append(tok3)
 
-        // Observe activeIntegrations — pill activated → initial read; deactivated → clear
-        AppState.shared.$activeIntegrations
-            .sink { [weak self] integrations in
-                guard let self else { return }
-                if integrations.contains("integration_music") {
-                    if self.isMusicRunning(),
-                       UserDefaults.standard.bool(forKey: "coucou.musicAutomationGranted") {
-                        self.fetchAndApply()
-                    }
-                } else {
-                    self.clearState()
-                }
-            }
-            .store(in: &cancellables)
     }
 
     // MARK: - Private helpers
@@ -133,7 +114,8 @@ final class MusicController: ObservableObject {
     }
 
     private func handlePlayerInfo(playerState: String?, name: String?, artist inputArtist: String?, album inputAlbum: String?) {
-        guard isPillActive else { return }
+        // Fase 5, sesión 3: la pill de música se quitó — el seguimiento sigue
+        // para los controles por voz; ya no hay tarjeta que la active.
 
         let playing = playerState == "Playing"
         let wasPlaying = AppState.shared.musicPlaying
@@ -143,7 +125,6 @@ final class MusicController: ObservableObject {
         album      = inputAlbum
 
         AppState.shared.musicPlaying = playing
-        syncTaskName()
 
         // Reveal only on transition from not-playing → playing
         if playing && !wasPlaying {
@@ -181,8 +162,7 @@ final class MusicController: ObservableObject {
             artist     = values[2].isEmpty ? nil : Self.shortArtist(values[2])
             album      = values[3].isEmpty ? nil : values[3]
             AppState.shared.musicPlaying = playing
-            syncTaskName()
-            if playing && !wasPlaying {
+                if playing && !wasPlaying {
                 NotificationCenter.default.post(name: .musicReveal, object: nil)
             }
         }
@@ -191,16 +171,8 @@ final class MusicController: ObservableObject {
     private func clearState() {
         trackTitle = nil; artist = nil; album = nil
         AppState.shared.musicPlaying = false
-        syncTaskName()
     }
 
-    private func syncTaskName() {
-        guard let idx = AppState.shared.tasks.firstIndex(where: { $0.id == "integration_music" }) else { return }
-        let title = trackTitle ?? ""
-        AppState.shared.tasks[idx].name = title.isEmpty
-            ? (PillCatalog.definition(for: "integration_music")?.name ?? "Apple Music")
-            : title
-    }
 
     // MARK: - Playback controls
 

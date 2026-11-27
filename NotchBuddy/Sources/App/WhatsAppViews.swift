@@ -463,12 +463,6 @@ struct WhatsAppSettingsSection: View {
                 .onChange(of: enabled) { _, on in wa.setEnabled(on) }
 
             if enabled {
-                if !appState.activeIntegrations.contains(WhatsAppController.pillId) {
-                    Text("whatsapp.no-slot")
-                        .font(.system(size: 10))
-                        .foregroundColor(Color(hex: "#F4505E"))
-                }
-
                 // One click: Coucou downloads GOWA, checks it and starts it. No Terminal.
                 if gateway == .gowa { installBlock }
 

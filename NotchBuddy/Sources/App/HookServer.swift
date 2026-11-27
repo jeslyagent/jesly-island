@@ -74,10 +74,6 @@ final class HookServer: @unchecked Sendable {
         switch PillCatalog.basePillId(pill) {
         case "agent_cursor":  return "Handled in Cursor."
         case "agent_codex":   return "Handled in Codex."
-        case "agent_copilot": return "Handled in Copilot CLI."
-        case "agent_muse":    return "Handled in Muse Code."
-        case "agent_hermes":  return "Handled in Hermes."
-        case "agent_antigravity": return "Handled in Antigravity."
         default:              return "Handled in \(claudeHostName(pill: pill))."
         }
     }
@@ -88,10 +84,6 @@ final class HookServer: @unchecked Sendable {
         switch PillCatalog.basePillId(pill) {
         case "agent_cursor":  return "Still waiting in Cursor."
         case "agent_codex":   return "Still waiting in Codex."
-        case "agent_copilot": return "Still waiting in Copilot CLI."
-        case "agent_muse":    return "Still waiting in Muse Code."
-        case "agent_hermes":  return "Still waiting in Hermes."
-        case "agent_antigravity": return "Still waiting in Antigravity."
         default:              return "Still waiting in \(claudeHostName(pill: pill))."
         }
     }
@@ -265,7 +257,7 @@ final class HookServer: @unchecked Sendable {
         }
         task.finalLine = session.finalLine
         // A third-party agent's pill keeps the agent's name; Claude Code's and Codex's take the session's.
-        if !session.title.isEmpty, task.isIntegration || task.pill == "agent_claude-desktop" || task.id != task.pill {
+        if !session.title.isEmpty, task.isIntegration || task.id != task.pill {
             task.name = session.title
         }
         if let display = sessions.display(pill: client, session: session.rawSession) {
@@ -591,22 +583,11 @@ final class HookServer: @unchecked Sendable {
 
         let eventName = payload["hook_event_name"] as? String ?? ""
 
-        // Antigravity PreToolUse: its hook waits for an answer. "ask" right away leaves the tool
-        // to Antigravity's own rules and prompt; a command it has no rule for waits for a click
-        // in the notch when that is turned on in Settings.
+        // Fase 5, sesión 3: la pill de Antigravity se quitó — su hook responde
+        // "ask" y Antigravity decide en su propio terminal, sin tarjeta en la isla.
         if coucouKind == "agy_pre_tool" {
-            let gate = Self.agyApprovalGate(payload)
-            Task { @MainActor in
-                self.processEvent(name: eventName, payload: payload)
-                if let gate {
-                    self.processAgyApproval(fd: fd, payload: payload, command: gate.command,
-                                            waitSeconds: gate.waitSeconds)
-                }
-            }
-            if gate == nil {
-                sendLine(fd: fd, text: #"{"permissionDecision":"ask"}"#)
-                close(fd)
-            }
+            sendLine(fd: fd, text: #"{"permissionDecision":"ask"}"#)
+            close(fd)
             return
         }
 
@@ -752,11 +733,6 @@ final class HookServer: @unchecked Sendable {
             NotificationCenter.default.post(name: .checkMondayRecap, object: nil)
             if state.isPresent { expandIfNeeded(to: .overview) }
             SoundEngine.shared.play("work")
-            if agentId == "agent_hermes", let platform = payload["platform"] as? String,
-               !platform.isEmpty, platform != "cli" {
-                let capitalized = platform.prefix(1).uppercased() + platform.dropFirst()
-                step(String(capitalized))
-            }
 
         case "UserPromptSubmit":
             activeSessionId = sessionId
@@ -936,8 +912,14 @@ final class HookServer: @unchecked Sendable {
     /// Validates a coucou_agent name: lowercase, digits and hyphens, 1–24 chars.
     /// "claude" is reserved and rejected so it cannot impersonate the Claude Code pill.
     /// Returns the name unchanged if valid, nil otherwise.
+    /// Agents whose pills were removed (Fase 5, sesión 3): their hook events are
+    /// ignored for pill routing — no dynamic pill, no approval card.
+    private static let removedAgentNames: Set<String> = [
+        "copilot", "muse", "hermes", "antigravity", "opencode", "amp", "claude-desktop",
+    ]
+
     private static func validateAgent(_ raw: String) -> String? {
-        guard !raw.isEmpty, raw.count <= 24, raw != "claude" else { return nil }
+        guard !raw.isEmpty, raw.count <= 24, raw != "claude", !removedAgentNames.contains(raw) else { return nil }
         for scalar in raw.unicodeScalars {
             let v = scalar.value
             let ok = (v >= 0x61 && v <= 0x7A)  // a-z
@@ -1065,26 +1047,17 @@ final class HookServer: @unchecked Sendable {
             termProgram.lowercased().contains("vscode") ||
             bundleId.lowercased().contains("vscode"))
 
-        // Codex, Copilot CLI and Muse Code get the same approval card as Claude Code / Cursor.
+        // Codex gets the same approval card as Claude Code / Cursor.
         // Other external agents (any other coucou_agent) answer immediately with "ask"
         // so the agent re-asks in its own terminal — they do not get a notch card.
         #if !APPSTORE
         let isCodexRequest   = rawAgent == "codex"
-        let isCopilotRequest = rawAgent == "copilot"
-        let isMuseRequest    = rawAgent == "muse"
-        // isHermesRequest is true only when the plugin sent coucou_has_transport: true,
-        // meaning register_approval_transport is wired and Hermes will honour our choice.
-        // Without that flag the request falls through to "ask" so Hermes handles it natively.
-        let isHermesRequest  = rawAgent == "hermes"
-            && UserDefaults.standard.bool(forKey: "hermesApprovalsEnabled")
-            && (payload["coucou_has_transport"] as? Bool == true)
         #else
         let isCodexRequest   = false
-        let isCopilotRequest = false
-        let isMuseRequest    = false
-        let isHermesRequest  = false
         #endif
-        if !isCodexRequest && !isCopilotRequest && !isMuseRequest && !isHermesRequest && Self.validateAgent(rawAgent) != nil {
+        // Fase 5, sesión 3: las pills de estos agentes se quitaron — sus permisos
+        // se responden en su propio terminal, nunca con tarjeta en la isla.
+        if !isCodexRequest && (Self.removedAgentNames.contains(rawAgent) || Self.validateAgent(rawAgent) != nil) {
             Task.detached { [weak self] in
                 self?.sendLine(fd: fd, text: #"{"permissionDecision":"ask"}"#)
                 close(fd)
@@ -1096,12 +1069,6 @@ final class HookServer: @unchecked Sendable {
         let pillId: String
         if isCodexRequest {
             pillId = "agent_codex"
-        } else if isCopilotRequest {
-            pillId = "agent_copilot"
-        } else if isMuseRequest {
-            pillId = "agent_muse"
-        } else if isHermesRequest {
-            pillId = "agent_hermes"
         } else if isCursorEditor {
             pillId = "agent_cursor"
         } else {
@@ -1111,7 +1078,7 @@ final class HookServer: @unchecked Sendable {
         let terminalHost = isCursorEditor || isVSCodeEditor ? nil
             : ClaudeHost.terminal(termProgram: termProgram, bundleId: bundleId)
         let isTerminal = terminalHost != nil && ClaudeHost.terminalCardsEnabled
-        guard isCodexRequest || isCopilotRequest || isMuseRequest || isHermesRequest || isCursorEditor || isVSCodeEditor || isTerminal else {
+        guard isCodexRequest || isCursorEditor || isVSCodeEditor || isTerminal else {
             Task.detached { [weak self] in
                 self?.sendLine(fd: fd, text: #"{"permissionDecision":"ask"}"#)
                 close(fd)
@@ -1203,87 +1170,6 @@ final class HookServer: @unchecked Sendable {
     /// Antigravity's PreToolUse hook needs this long (seconds) for a card to wait for a click:
     /// the hooks Coucou wrote before had 10 s and must be installed again.
     static let agyApprovalHookTimeout = 120
-
-    /// The command to put on a card, and how long it may wait, when Antigravity is about to
-    /// run a shell command it has no rule for; nil when Antigravity decides on its own.
-    /// Runs on the socket's thread: reads UserDefaults and Antigravity's small config files.
-    private static func agyApprovalGate(_ payload: [String: Any]) -> (command: String, waitSeconds: Double)? {
-        #if APPSTORE
-        return nil
-        #else
-        guard UserDefaults.standard.bool(forKey: agyApprovalsKey),
-              payload["coucou_agent"] as? String == "antigravity" else { return nil }
-        let tool = payload["tool_name"] as? String ?? ""
-        guard tool == "run_command" || tool.hasSuffix(":run_command") else { return nil }
-        let input = payload["tool_input"] as? [String: Any] ?? [:]
-        let command = (input["command"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !command.isEmpty else { return nil }
-        // Coucou gives up 10 s before Antigravity stops waiting for the hook.
-        guard let timeout = agyPreToolTimeout(), timeout >= agyApprovalHookTimeout else { return nil }
-        let rules = AgyPermissionRules.load(cwd: payload["cwd"] as? String ?? "")
-        guard rules.verdict(for: command) == .unknown else { return nil }
-        return (command, min(Double(timeout - 10), 110))
-        #endif
-    }
-
-    /// Antigravity is waiting on its PreToolUse hook for a command: puts it on the approval
-    /// card. Allow and Deny answer the hook; Reply in terminal, the timeout or Antigravity
-    /// giving up hand the choice back to Antigravity's own prompt.
-    @MainActor
-    private func processAgyApproval(fd: Int32, payload: [String: Any], command: String, waitSeconds: Double) {
-        let sessionId = payload["session_id"] as? String ?? "unknown"
-        let cwd = payload["cwd"] as? String ?? ""
-        let projectName = sessionName(payload, cwd: cwd)
-        let pillId = "agent_antigravity"
-        let tool = payload["tool_name"] as? String ?? "run_command"
-        let inputKey = Self.approvalInputKey(payload["tool_input"] as? [String: Any] ?? [:])
-        nbLog("Antigravity command waits for the notch [\(sessionId.prefix(8))]")
-
-        let entry = QueuedApproval(id: UUID(), fd: fd, sessionId: sessionId, pillId: pillId,
-                                   projectName: projectName, cwd: cwd, tool: tool,
-                                   command: command, inputKey: inputKey)
-        guard approvals.enqueue(entry) == .accepted else {
-            nbLog("Antigravity command: \(ApprovalQueue.maxPending) already waiting, asked in Antigravity")
-            Task.detached { [weak self] in
-                self?.sendLine(fd: fd, text: #"{"permissionDecision":"ask"}"#)
-                close(fd)
-            }
-            return
-        }
-        // Tells the hook the card is up, so it waits for a click instead of giving up after a
-        // few seconds. Written before anything else can answer or close this fd.
-        sendLine(fd: fd, text: #"{"pending":true}"#)
-        activeSessionId = sessionId
-
-        // Same display as the session's other events (processEvent: an external agent pill).
-        upsertTask(pill: pillId,
-                   display: PillSessionRegistry.Display(session: sessionId, projectName: "antigravity",
-                                                        cwd: "", hostApp: nil,
-                                                        bundleId: payload["bundle_id"] as? String ?? ""),
-                   working: true, externalAgent: "antigravity")
-        AppState.shared.updateTask(id: pillId, state: .approval)
-        SoundEngine.shared.play("approval")
-
-        // The hook hung up (Antigravity stopped waiting, or the turn was cancelled): drop the
-        // card. The cancel handler closes the fd — never close it anywhere else.
-        let entryId = entry.id
-        let source = DispatchSource.makeReadSource(fileDescriptor: fd, queue: .main)
-        source.setEventHandler { [weak self] in
-            guard let self, self.approvals.contains(id: entryId) else { return }
-            self.removeApproval(id: entryId, note: self.handledNote(pill: pillId))
-        }
-        source.setCancelHandler { close(fd) }
-        source.resume()
-        approvalSources[entryId] = source
-
-        // Give up before Antigravity does: the hook then answers "ask" and Antigravity asks itself.
-        DispatchQueue.main.asyncAfter(deadline: .now() + waitSeconds) { [weak self] in
-            guard let self, self.approvals.contains(id: entryId) else { return }
-            self.removeApproval(id: entryId, note: self.waitingNote(pill: pillId))
-        }
-
-        showApprovalHead()
-    }
 
     #if !APPSTORE
     /// Timeout (seconds) of Coucou's PreToolUse hook in ~/.gemini/config/hooks.json, nil if absent.

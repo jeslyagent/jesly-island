@@ -193,27 +193,20 @@ enum ChatProvider: String, CaseIterable, Codable {
     }
 
     var pillID: String {
+        // Fase 5, sesión 3: las pills de chat directo se quitaron; solo quedan
+        // los proveedores sin pill de catálogo. El chat es JESLY Chat.
         switch self {
-        case .anthropic: "ai_anthropic"
-        case .google:    "ai_google"
-        case .openai:    "ai_openai"
-        case .ollama:    "ai_ollama"
-        case .lmstudio:  "ai_lmstudio"
         case .deepseek:  "ai_deepseek"
         case .qwen:      "ai_qwen"
         case .moonshot:  "ai_moonshot"
         case .cursor:    "ai_cursor"
         case .copilot:   "ai_copilot"
+        default:         ""
         }
     }
 
     init?(pillID: String) {
         switch pillID {
-        case "ai_anthropic": self = .anthropic
-        case "ai_google":    self = .google
-        case "ai_openai":    self = .openai
-        case "ai_ollama":    self = .ollama
-        case "ai_lmstudio":  self = .lmstudio
         case "ai_deepseek":  self = .deepseek
         case "ai_qwen":      self = .qwen
         case "ai_moonshot":  self = .moonshot

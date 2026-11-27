@@ -130,7 +130,7 @@ final class ServicePublisher {
 @MainActor
 enum ServiceSnapshots {
     static func all(from s: AppState) -> [String: ServiceSnapshot] {
-        let built = [github(s), stripe(s), vercel(s), resend(s), calcom(s), n8n(s), notion(s)].compactMap { $0 }
+        let built = [github(s), vercel(s)].compactMap { $0 }
         return Dictionary(uniqueKeysWithValues: built.map { ($0.pillId, $0) })
     }
 
@@ -215,53 +215,6 @@ enum ServiceSnapshots {
                                sections: sections, updatedAt: pulse.fetchedAt)
     }
 
-    // MARK: Stripe
-
-    static func stripe(_ s: AppState) -> ServiceSnapshot? {
-        if let error = s.stripeError, !s.stripeLoaded {
-            return ServiceSnapshot(pillId: "integration_stripe", tone: .error, headline: "Can't reach Stripe",
-                                   reason: error, sections: [], updatedAt: Date())
-        }
-        guard s.stripeLoaded else { return nil }
-        let currency = s.stripeCurrency.uppercased()
-        func money(_ cents: Int, _ code: String) -> String {
-            String(format: "%.2f %@", Double(cents) / 100, code.uppercased())
-        }
-        let latest = s.stripePayments.first
-        let overall: ServiceTone
-        let reason: String
-        if let error = s.stripeError {
-            overall = .error
-            reason = "Stripe answered with an error: \(error)"
-        } else if let latest {
-            let what = latest.description.map { " · \($0)" } ?? ""
-            switch latest.status {
-            case "succeeded":
-                overall = Date().timeIntervalSince(latest.createdAt) < 86_400 ? .ok : .idle
-                reason = "Last payment received: \(money(latest.amount, latest.currency))\(what)"
-            case "failed":
-                overall = .error
-                reason = "Last payment failed: \(money(latest.amount, latest.currency))\(what)"
-            default:
-                overall = .warning
-                reason = "Last payment pending: \(money(latest.amount, latest.currency))\(what)"
-            }
-        } else {
-            overall = .idle
-            reason = "No payment yet"
-        }
-        let items = s.stripePayments.prefix(10).map {
-            ServiceItem(title: money($0.amount, $0.currency),
-                        detail: [$0.description, $0.status].compactMap { $0 }.joined(separator: " · "),
-                        tone: $0.isSuccess ? .ok : ($0.status == "failed" ? .error : .warning),
-                        date: $0.createdAt)
-        }
-        return ServiceSnapshot(pillId: "integration_stripe", tone: overall,
-                               headline: "Balance \(money(s.stripeBalance, currency))", reason: reason,
-                               sections: items.isEmpty ? [] : [ServiceSection(title: "Recent payments", items: items)],
-                               updatedAt: latest?.createdAt ?? Date())
-    }
-
     // MARK: Vercel
 
     static func vercel(_ s: AppState) -> ServiceSnapshot? {
@@ -288,108 +241,6 @@ enum ServiceSnapshots {
                                headline: "\(latest.projectName) · \(latest.statusLabel)", reason: reason,
                                sections: [ServiceSection(title: "Deployments", items: items)],
                                updatedAt: latest.createdAt)
-    }
-
-    // MARK: Resend
-
-    static func resend(_ s: AppState) -> ServiceSnapshot? {
-        guard let latest = s.resendEmails.first else { return nil }
-        func tone(_ event: String) -> ServiceTone {
-            switch event {
-            case "bounced", "complained", "failed": .error
-            case "delivered", "opened", "clicked": .ok
-            case "delivery_delayed": .warning
-            default: .info
-            }
-        }
-        let reason: String
-        switch tone(latest.lastEvent) {
-        case .error: reason = "Last email \(latest.lastEvent): \(latest.subject)"
-        case .warning: reason = "Last email is delayed: \(latest.subject)"
-        case .ok: reason = "Last email \(latest.lastEvent): \(latest.subject)"
-        default: reason = "Last email \(latest.lastEvent): \(latest.subject)"
-        }
-        let items = s.resendEmails.prefix(10).map {
-            ServiceItem(title: $0.subject, detail: "to \($0.to.joined(separator: ", ")) · \($0.lastEvent)",
-                        tone: tone($0.lastEvent), date: $0.createdAt)
-        }
-        let total = s.resendTotal.map { "\($0) emails sent" } ?? "Emails"
-        return ServiceSnapshot(pillId: "integration_resend", tone: tone(latest.lastEvent), headline: total,
-                               reason: reason, sections: [ServiceSection(title: "Recent emails", items: items)],
-                               updatedAt: latest.createdAt)
-    }
-
-    // MARK: Cal.com
-
-    static func calcom(_ s: AppState) -> ServiceSnapshot? {
-        if let error = s.calcomError, !s.calcomLoaded {
-            return ServiceSnapshot(pillId: "integration_calcom", tone: .error, headline: "Can't reach Cal.com",
-                                   reason: error, sections: [], updatedAt: Date())
-        }
-        guard s.calcomLoaded else { return nil }
-        let upcoming = s.calcomBookings.filter { $0.endTime > Date() }.sorted { $0.startTime < $1.startTime }
-        let next = upcoming.first { $0.isActive }
-        let time = Date.FormatStyle(date: .abbreviated, time: .shortened)
-        let overall: ServiceTone
-        let reason: String
-        if let next {
-            let soon = next.startTime.timeIntervalSinceNow < 3600
-            overall = soon ? .warning : .info
-            let with = next.attendeeName.map { " with \($0)" } ?? ""
-            reason = "\(soon ? "Starting soon" : "Next"): \(next.title)\(with), \(next.startTime.formatted(time))"
-        } else {
-            overall = .idle
-            reason = "No upcoming booking"
-        }
-        let items = upcoming.prefix(10).map {
-            ServiceItem(title: $0.title,
-                        detail: [$0.attendeeName, $0.status.lowercased()].compactMap { $0 }.joined(separator: " · "),
-                        tone: $0.isActive ? .info : .idle, date: $0.startTime)
-        }
-        let count = upcoming.filter(\.isActive).count
-        return ServiceSnapshot(pillId: "integration_calcom", tone: overall,
-                               headline: "\(count) upcoming booking\(count == 1 ? "" : "s")", reason: reason,
-                               sections: items.isEmpty ? [] : [ServiceSection(title: "Upcoming", items: items)],
-                               updatedAt: Date())
-    }
-
-    // MARK: n8n
-
-    static func n8n(_ s: AppState) -> ServiceSnapshot? {
-        guard let latest = s.n8nRuns.first else { return nil }
-        let reason = latest.success
-            ? "Last run succeeded: \(latest.workflow)"
-            : "Last run failed: \(latest.workflow)\(latest.detail.map { " · \($0)" } ?? "")"
-        let items = s.n8nRuns.map {
-            ServiceItem(title: $0.workflow, detail: $0.detail ?? ($0.success ? "succeeded" : "failed"),
-                        tone: $0.success ? .ok : .error, date: $0.date)
-        }
-        let failed = s.n8nRuns.filter { !$0.success }.count
-        return ServiceSnapshot(pillId: "integration_n8n", tone: latest.success ? .ok : .error,
-                               headline: failed == 0 ? "All recent runs succeeded" : "\(failed) failed run\(failed == 1 ? "" : "s")",
-                               reason: reason, sections: [ServiceSection(title: "Recent runs", items: items)],
-                               updatedAt: latest.date)
-    }
-
-    // MARK: Notion
-
-    static func notion(_ s: AppState) -> ServiceSnapshot? {
-        if let error = s.notionError, !s.notionLoaded {
-            return ServiceSnapshot(pillId: "integration_notion", tone: .error, headline: "Can't reach Notion",
-                                   reason: error, sections: [], updatedAt: Date())
-        }
-        guard s.notionLoaded else { return nil }
-        let pages = s.notionPages.sorted { $0.lastEditedAt > $1.lastEditedAt }
-        let items = pages.prefix(10).map {
-            ServiceItem(title: [$0.emoji, $0.title].compactMap { $0 }.joined(separator: " "),
-                        tone: .info, date: $0.lastEditedAt, url: $0.url)
-        }
-        let reason = pages.first.map { "Last edited: \($0.title)" } ?? "No recent page"
-        let recent = (pages.first?.lastEditedAt.timeIntervalSinceNow ?? -.infinity) > -3600
-        return ServiceSnapshot(pillId: "integration_notion", tone: recent ? .info : .idle,
-                               headline: "\(pages.count) recent page\(pages.count == 1 ? "" : "s")", reason: reason,
-                               sections: items.isEmpty ? [] : [ServiceSection(title: "Recently edited", items: items)],
-                               updatedAt: pages.first?.lastEditedAt ?? Date())
     }
 }
 #endif

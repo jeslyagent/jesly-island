@@ -9,7 +9,7 @@ struct PortfolioCardView: View {
     @ObservedObject private var portfolio = PortfolioController.shared
 
     private var accent: Color {
-        Color(hex: PillCatalog.definition(for: PortfolioController.pillId)?.color ?? "#FFD700")
+        Color(hex: "#FFD700")
     }
 
     private var totalUSD: Double {

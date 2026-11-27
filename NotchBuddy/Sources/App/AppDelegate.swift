@@ -346,15 +346,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #endif
         N8nPoller.shared.start()
         VercelPoller.shared.start()
-        ResendPoller.shared.start()
         GithubPoller.shared.start()
         JeslyProposalsPoller.shared.start()  // Fase 3: propuestas de JESLY (API local, 5 s)
         JeslyProposalStore.shared.start()    // Fase 3 sesión 2: tarjeta Propuesta/Permiso + reglas "Siempre"
         JeslyVoiceStore.shared.start()       // Fase 4 sesión 3: estado del demonio "Oye JESLY" (sondeo 5 s)
         JeslyWorkflowsStore.shared.start()   // Fase 5 sesión 1: workflows, habilidades y recordatorios (sondeo 15 s)
-        StripePoller.shared.start()
-        CalcomPoller.shared.start()
-        NotionPoller.shared.start()
         NotificationCenter.default.addObserver(self, selector: #selector(openSettingsFromNotification(_:)),
                                                name: .openFullSettings, object: nil)
         // After the greeting ends, fly Mochi back to the desktop if it was there at last quit
@@ -376,10 +372,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MailController.shared.start()
         WhatsAppController.shared.start()
         MacUpdater.shared.start()
-        ClaudeDesktopChatWatcher.shared.start()
         #endif
         CryptoController.shared.start()
-        CoucoudoroController.shared.start()
         PortfolioController.shared.start()
     }
 }

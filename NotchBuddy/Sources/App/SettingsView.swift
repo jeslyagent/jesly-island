@@ -121,8 +121,6 @@ struct SettingsView: View {
     @AppStorage(CryptoSettings.coinsKey)        private var cryptoCoins = CryptoSettings.defaultCoins
     @AppStorage(CryptoSettings.alertKey)        private var cryptoAlert = false
     @AppStorage(CryptoSettings.alertPercentKey) private var cryptoAlertPercent = 5.0
-    @AppStorage(CoucoudoroSettings.workKey)     private var coucoudoroWork = CoucoudoroSettings.defaultWork
-    @AppStorage(CoucoudoroSettings.restKey)     private var coucoudoroRest = CoucoudoroSettings.defaultRest
 
     // Hotkey
     @State private var hotkeyFlags: UInt    = AppState.shared.hotkeyFlags
@@ -876,9 +874,6 @@ struct SettingsView: View {
             .settingsAnchor("agents.claude")
 
         #if !APPSTORE
-        ClaudeDesktopChatSettingsSection()
-            .settingsAnchor("agents.claude-desktop")
-
         GroupBox(String(localized: "hooks.gemini.title")) {
             VStack(alignment: .leading, spacing: 10) {
                 Text(geminiHooksInstalled
@@ -913,57 +908,6 @@ struct SettingsView: View {
         }
             .settingsAnchor("agents.gemini")
 
-        GroupBox(String(localized: "hooks.antigravity.title")) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(agyHooksInstalled
-                     ? String(localized: "hooks.antigravity.installed")
-                     : "~/.gemini/config/hooks.json")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.secondary)
-                HStack(spacing: 10) {
-                    Button(String(localized: "hooks.install")) { triggerAgyPreview(install: true) }
-                        .buttonStyle(.borderedProminent)
-                    Button(String(localized: "hooks.uninstall")) { triggerAgyPreview(install: false) }
-                        .buttonStyle(.bordered)
-                }
-                if showAgyDiff {
-                    ScrollView {
-                        Text(pendingAgyJSON)
-                            .font(.system(size: 10, design: .monospaced))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .frame(height: 140)
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(6)
-                    HStack {
-                        Button(String(localized: "hooks.confirm-write")) { confirmAgyOp() }
-                            .buttonStyle(.borderedProminent)
-                        Button(String(localized: "Cancel")) { showAgyDiff = false; pendingAgyJSON = "" }
-                            .buttonStyle(.bordered)
-                    }
-                }
-
-                if agyHooksInstalled {
-                    Divider()
-                    Toggle(String(localized: "hooks.antigravity.approvals"), isOn: $agyApprovalsEnabled)
-                    Text(agyApprovalsEnabled
-                         ? String(localized: "hooks.antigravity.approvals.on")
-                         : String(localized: "hooks.antigravity.approvals.off"))
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    // Hooks written by an older Coucou give Antigravity 10 s: too short to wait for a click.
-                    if agyApprovalsEnabled, (agyHookTimeout ?? 0) < HookServer.agyApprovalHookTimeout {
-                        Text(String(localized: "hooks.antigravity.approvals.update"))
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            }
-            .padding(6)
-        }
-            .settingsAnchor("agents.antigravity")
 
         GroupBox(String(localized: "hooks.codex.title")) {
             VStack(alignment: .leading, spacing: 10) {
@@ -999,214 +943,10 @@ struct SettingsView: View {
         }
             .settingsAnchor("agents.codex")
 
-        GroupBox(String(localized: "hooks.copilot.title")) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(copilotHooksInstalled
-                     ? String(localized: "hooks.copilot.installed")
-                     : "~/.copilot/hooks/coucou.json")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.secondary)
-                HStack(spacing: 10) {
-                    Button(String(localized: "hooks.install")) { triggerCopilotPreview(install: true) }
-                        .buttonStyle(.borderedProminent)
-                    Button(String(localized: "hooks.uninstall")) { triggerCopilotPreview(install: false) }
-                        .buttonStyle(.bordered)
-                }
-                if showCopilotDiff {
-                    ScrollView {
-                        Text(pendingCopilotJSON)
-                            .font(.system(size: 10, design: .monospaced))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .frame(height: 140)
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(6)
-                    HStack {
-                        Button(String(localized: "hooks.confirm-write")) { confirmCopilotOp() }
-                            .buttonStyle(.borderedProminent)
-                        Button(String(localized: "Cancel")) { showCopilotDiff = false; pendingCopilotJSON = "" }
-                            .buttonStyle(.bordered)
-                    }
-                }
-            }
-            .padding(6)
-        }
-            .settingsAnchor("agents.copilot")
 
-        GroupBox(String(localized: "hooks.muse.title")) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(museHooksInstalled
-                     ? String(localized: "hooks.muse.installed")
-                     : "~/.config/muse/settings.json")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.secondary)
-                HStack(spacing: 10) {
-                    Button(String(localized: "hooks.install")) { triggerMusePreview(install: true) }
-                        .buttonStyle(.borderedProminent)
-                    Button(String(localized: "hooks.uninstall")) { triggerMusePreview(install: false) }
-                        .buttonStyle(.bordered)
-                }
-                if showMuseDiff {
-                    ScrollView {
-                        Text(pendingMuseJSON)
-                            .font(.system(size: 10, design: .monospaced))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .frame(height: 140)
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(6)
-                    HStack {
-                        Button(String(localized: "hooks.confirm-write")) { confirmMuseOp() }
-                            .buttonStyle(.borderedProminent)
-                        Button(String(localized: "Cancel")) { showMuseDiff = false; pendingMuseJSON = "" }
-                            .buttonStyle(.bordered)
-                    }
-                }
-            }
-            .padding(6)
-        }
-            .settingsAnchor("agents.muse")
 
-        GroupBox(String(localized: "plugin.opencode.title")) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(openCodePluginInstalled
-                     ? String(localized: "plugin.opencode.installed")
-                     : "~/.config/opencode/plugins/coucou.js")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.secondary)
-                HStack(spacing: 10) {
-                    Button(String(localized: "plugin.install")) { triggerOpenCodePreview(install: true) }
-                        .buttonStyle(.borderedProminent)
-                    Button(String(localized: "hooks.uninstall")) { triggerOpenCodePreview(install: false) }
-                        .buttonStyle(.bordered)
-                }
-                if showOpenCodeDiff {
-                    ScrollView {
-                        Text(pendingOpenCodeContent)
-                            .font(.system(size: 10, design: .monospaced))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .frame(height: 140)
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(6)
-                    HStack {
-                        Button(String(localized: "hooks.confirm-write")) { confirmOpenCodeOp() }
-                            .buttonStyle(.borderedProminent)
-                        Button(String(localized: "Cancel")) { showOpenCodeDiff = false; pendingOpenCodeContent = "" }
-                            .buttonStyle(.bordered)
-                    }
-                }
-            }
-            .padding(6)
-        }
-            .settingsAnchor("agents.opencode")
 
-        GroupBox(String(localized: "plugin.amp.title")) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(ampPluginInstalled
-                     ? String(localized: "plugin.amp.installed")
-                     : "~/.config/amp/plugins/coucou.ts")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.secondary)
-                HStack(spacing: 10) {
-                    Button(String(localized: "plugin.install")) { triggerAmpPreview(install: true) }
-                        .buttonStyle(.borderedProminent)
-                    Button(String(localized: "hooks.uninstall")) { triggerAmpPreview(install: false) }
-                        .buttonStyle(.bordered)
-                }
-                if showAmpDiff {
-                    ScrollView {
-                        Text(pendingAmpContent)
-                            .font(.system(size: 10, design: .monospaced))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .frame(height: 140)
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(6)
-                    HStack {
-                        Button(String(localized: "hooks.confirm-write")) { confirmAmpOp() }
-                            .buttonStyle(.borderedProminent)
-                        Button(String(localized: "Cancel")) { showAmpDiff = false; pendingAmpContent = "" }
-                            .buttonStyle(.bordered)
-                    }
-                }
-            }
-            .padding(6)
-        }
-            .settingsAnchor("agents.amp")
 
-        GroupBox(String(localized: "plugin.hermes.title")) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(hermesPluginInstalled
-                     ? String(localized: "plugin.hermes.installed")
-                     : "~/.hermes/plugins/coucou/__init__.py")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.secondary)
-                HStack(spacing: 10) {
-                    if !hermesPluginInstalled {
-                        Button(String(localized: "plugin.install")) { triggerHermesPluginPreview(install: true) }
-                            .buttonStyle(.borderedProminent)
-                    } else {
-                        Button(String(localized: "hooks.uninstall")) { triggerHermesPluginPreview(install: false) }
-                            .buttonStyle(.bordered)
-                    }
-                }
-                if showHermesPluginDiff {
-                    ScrollView {
-                        Text(pendingHermesPluginContent)
-                            .font(.system(size: 10, design: .monospaced))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .frame(height: 180)
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(6)
-                    HStack {
-                        Button(String(localized: "hooks.confirm-write")) { confirmHermesPluginOp() }
-                            .buttonStyle(.borderedProminent)
-                        Button(String(localized: "Cancel")) { showHermesPluginDiff = false; pendingHermesPluginContent = "" }
-                            .buttonStyle(.bordered)
-                    }
-                }
-
-                if hermesPluginInstalled {
-                    Divider()
-                    Toggle(String(localized: "plugin.hermes.approvals"), isOn: $hermesApprovalsEnabled)
-                        .onChange(of: hermesApprovalsEnabled) { _, _ in triggerHermesConfigPreview() }
-                        .disabled(!hermesSupportsApprovals)
-                    if !hermesSupportsApprovals {
-                        Text("Requires a newer version of Hermes — run: hermes update")
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } else {
-                        Text(hermesApprovalsEnabled
-                             ? String(localized: "plugin.hermes.approvals.enabled")
-                             : String(localized: "plugin.hermes.approvals.disabled"))
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    if showHermesConfigDiff {
-                        ScrollView {
-                            Text(pendingHermesConfigContent)
-                                .font(.system(size: 10, design: .monospaced))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .frame(height: 120)
-                        .background(Color(NSColor.textBackgroundColor))
-                        .cornerRadius(6)
-                        HStack {
-                            Button(String(localized: "hooks.confirm-write")) { confirmHermesConfigOp() }
-                                .buttonStyle(.borderedProminent)
-                            Button(String(localized: "Cancel")) { showHermesConfigDiff = false; pendingHermesConfigContent = "" }
-                                .buttonStyle(.bordered)
-                        }
-                    }
-                }
-            }
-            .padding(6)
-        }
-            .settingsAnchor("agents.hermes")
         #if !APPSTORE
         .task(id: hermesPluginInstalled) {
             guard hermesPluginInstalled else { hermesSupportsApprovals = false; return }
@@ -1691,24 +1431,6 @@ struct SettingsView: View {
                 .onChange(of: cryptoExchange) { _, _ in CryptoController.shared.settingsChanged() }
                 .onChange(of: cryptoCurrency) { _, _ in CryptoController.shared.settingsChanged() }
 
-                // Coucoudoro: a local countdown. Lengths are minutes and apply to the next phase.
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 6) {
-                        Circle().fill(Color(hex: "#0EA5E9")).frame(width: 8, height: 8)
-                        Text(verbatim: "Coucoudoro").font(.system(size: 12, weight: .semibold))
-                    }
-                    coucoudoroMinutes(String(localized: "coucoudoro.work", defaultValue: "Work"),
-                                 value: $coucoudoroWork, bounds: CoucoudoroSettings.workBounds)
-                    coucoudoroMinutes(String(localized: "coucoudoro.rest", defaultValue: "Rest"),
-                                 value: $coucoudoroRest, bounds: CoucoudoroSettings.restBounds)
-                    Text(String(localized: "coucoudoro.hint", defaultValue: "Work, then rest, on repeat, until you stop. Turn the Coucoudoro pill on to use it."))
-                        .font(.system(size: 10))
-                        .foregroundColor(Color(hex: "#8E939C"))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .onAppear { applyCoucoudoroSettings() }
-                .onChange(of: coucoudoroWork) { _, _ in applyCoucoudoroSettings() }
-                .onChange(of: coucoudoroRest) { _, _ in applyCoucoudoroSettings() }
 
                 #if !APPSTORE
                 // Portfolio: exchange accounts + wallets (GitHub build, like its pill).
@@ -2463,40 +2185,6 @@ struct SettingsView: View {
     }
     #endif
 
-    /// Pull each length into 1…60 minutes.
-    private func applyCoucoudoroSettings() {
-        let work = CoucoudoroSettings.clampWork(coucoudoroWork)
-        let rest = CoucoudoroSettings.clampRest(coucoudoroRest)
-        if coucoudoroWork != work { coucoudoroWork = work }
-        if coucoudoroRest != rest { coucoudoroRest = rest }
-        CoucoudoroController.shared.settingsChanged()
-    }
-
-    /// One minute per step, with the current length beside the slider. Same row as the volume slider.
-    private func coucoudoroMinutes(_ label: String, value: Binding<Int>, bounds: ClosedRange<Int>) -> some View {
-        let shown = min(max(value.wrappedValue, bounds.lowerBound), bounds.upperBound)
-        let minutes = Binding<Double>(
-            get: { Double(min(max(value.wrappedValue, bounds.lowerBound), bounds.upperBound)) },
-            set: { value.wrappedValue = Int($0.rounded()) }
-        )
-        let unit = String(localized: "coucoudoro.unit", defaultValue: "min")
-        return HStack(spacing: 8) {
-            Text(label)
-                .lineLimit(1)
-            Slider(value: minutes, in: Double(bounds.lowerBound)...Double(bounds.upperBound), step: 1)
-                .accessibilityLabel(Text(label))
-                .accessibilityValue(Text("\(shown) \(unit)"))
-            Text(verbatim: "\(shown)")
-                .monospacedDigit()
-                .foregroundColor(.secondary)
-                .frame(minWidth: 16, alignment: .trailing)
-            Text(unit)
-                .font(.system(size: 10))
-                .foregroundColor(.secondary)
-        }
-        .font(.system(size: 11))
-    }
-
     private func saveIntegrations() {
         saveKey("resend-api-key",  value: resendKey)
         saveKey("resend-from",     value: resendFrom)
@@ -2611,13 +2299,7 @@ struct SettingsView: View {
             if def.comingSoon { return String(localized: "Coming soon") }
             #if !APPSTORE
             if def.id == "agent_gemini"        && !HookServer.geminiHooksInstalled()      { return String(localized: "Hooks not installed") }
-            if def.id == "agent_antigravity"   && !HookServer.agyHooksInstalled()        { return String(localized: "Hooks not installed") }
             if def.id == "agent_codex"         && !HookServer.codexHooksInstalled()      { return String(localized: "Hooks not installed") }
-            if def.id == "agent_copilot"       && !HookServer.copilotHooksInstalled()    { return String(localized: "Hooks not installed") }
-            if def.id == "agent_muse"          && !HookServer.museHooksInstalled()       { return String(localized: "Hooks not installed") }
-            if def.id == "agent_opencode"      && !HookServer.openCodePluginInstalled()  { return String(localized: "Plugin not installed") }
-            if def.id == "agent_amp"           && !HookServer.ampPluginInstalled()       { return String(localized: "Plugin not installed") }
-            if def.id == SpotifyController.pillId && !SpotifyController.shared.isInstalled { return String(localized: "Not installed") }
             #endif
             if def.category == .ai {
                 // JESLY Chat no pide clave: la API local acepta sin
@@ -2630,8 +2312,9 @@ struct SettingsView: View {
                     let url = provider == .ollama ? state.ollamaServerURL : state.lmstudioServerURL
                     if url.isEmpty { return String(localized: "Not connected") }
                 } else {
-                    let keyId = def.id == "ai_anthropic" ? "anthropic-api-key"
-                               : def.id == "ai_google"    ? "google-api-key" : "openai-api-key"
+                    // Fase 5, sesión 3: ya no hay pills de chat directo; solo queda
+                    // JESLY Chat (capturada arriba) y esta rama es inalcanzable.
+                    let keyId = "openai-api-key"
                     if KeychainStore.shared.get(keyId) == nil { return String(localized: "Key not configured") }
                 }
             }

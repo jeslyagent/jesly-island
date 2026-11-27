@@ -28,21 +28,8 @@ enum EntityResolver {
         "vsco":                 "integration_claude",
         // Agents
         "gemini":               "agent_gemini",
-        "copilot":              "agent_copilot",
-        "muse":                 "agent_muse",
-        "hermes":               "agent_hermes",
-        "amp":                  "agent_amp",
-        "opencode":             "agent_opencode",
-        "antigravity":          "agent_antigravity",
         "codex":                "agent_codex",
-        "claude desktop":       "agent_claude-desktop",
         // AI
-        "google":               "ai_google",
-        "openai":               "ai_openai",
-        "open ai":              "ai_openai",
-        "ollama":               "ai_ollama",
-        "lmstudio":             "ai_lmstudio",
-        "anthropic":            "ai_anthropic",
         // Services
         "github":               "integration_github",
         // GitHub phonetic variants (speech recognition mishears)
@@ -55,16 +42,6 @@ enum EntityResolver {
         "gitub":                "integration_github",
         "guit hub":             "integration_github",
         "vercel":               "integration_vercel",
-        "notion":               "integration_notion",
-        "stripe":               "integration_stripe",
-        "resend":               "integration_resend",
-        "n8n":                  "integration_n8n",
-        "calcom":               "integration_calcom",
-        "cal":                  "integration_calcom",
-        "spotify":              "integration_spotify",
-        "apple music":          "integration_music",
-        "music":                "integration_music",
-        "musique":              "integration_music",
     ]
 
     // MARK: - Public API

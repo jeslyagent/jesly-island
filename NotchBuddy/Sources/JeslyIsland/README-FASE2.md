@@ -1241,7 +1241,10 @@ cuentas :160), HEAD del scaffold = isla actual:
 ### 18.4 Inventario de pills de Coucou en el fork (para decidir con JC)
 
 Fuente única: `PillCatalog.all` (`CoucouKit/PillCatalog.swift`), 33
-pills. No se borró ninguna en esta sesión: la decisión es de JC.
+pills. **Fase 5, sesión 3 (2026-11-27): las 24 marcadas "Quitar"
+se quitaron del catálogo y de todo sitio que las referenciaba;
+quedan 9 pills: 3 de JESLY + 6 condicionales, pendientes de la
+confirmación de JC.**
 "Equivalente JESLY" es lo que la isla actual ya tiene (su propio
 `PillCatalog.swift` en `apps/island`). Las pills de servicio de
 Coucou se alimentan por n8n: sin feed configurado no muestran nada.
@@ -1250,44 +1253,44 @@ Coucou se alimentan por n8n: sin feed configurado no muestran nada.
 |---|---|---|---|
 | VS Code (`integration_claude`) | Vigila sesiones de Claude Code en VS Code | No (JESLY no vigila terminales) | Quedarse solo si JC usa Claude Code en VS Code |
 | Cursor (`agent_cursor`) | Vigila sesiones de Cursor | No | Quedarse solo si JC usa Cursor |
-| Antigravity (`agent_antigravity`) | Vigila sesiones de Antigravity | No | Quitar (JC no lo usa) |
+| Antigravity (`agent_antigravity`) | Vigila sesiones de Antigravity | No | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar (JC no lo usa) |
 | Codex (`agent_codex`) | Vigila sesiones de Codex | No | Quedarse solo si JC usa Codex |
 | Gemini CLI (`agent_gemini`) | Vigila sesiones de Gemini CLI | No | Quedarse solo si JC lo usa |
-| Copilot CLI (`agent_copilot`) | Vigila sesiones de Copilot | No | Quitar |
-| Muse Code (`agent_muse`) | Vigila sesiones de Muse | No | Quitar |
-| OpenCode (`agent_opencode`) | Vigila sesiones de OpenCode | No | Quitar |
-| Amp (`agent_amp`) | Vigila sesiones de Amp | No | Quitar |
-| Hermes (`agent_hermes`) | Vigila sesiones de Hermes | No | Quitar |
-| Claude Desktop (`agent_claude-desktop`) | Sesiones de la app Claude Desktop | No (el cerebro de JESLY es FreeLLMAPI/Ollama/Groq/Gemini/OpenRouter por la API) | Quitar |
+| Copilot CLI (`agent_copilot`) | Vigila sesiones de Copilot | No | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
+| Muse Code (`agent_muse`) | Vigila sesiones de Muse | No | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
+| OpenCode (`agent_opencode`) | Vigila sesiones de OpenCode | No | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
+| Amp (`agent_amp`) | Vigila sesiones de Amp | No | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
+| Hermes (`agent_hermes`) | Vigila sesiones de Hermes | No | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
+| Claude Desktop (`agent_claude-desktop`) | Sesiones de la app Claude Desktop | No (el cerebro de JESLY es FreeLLMAPI/Ollama/Groq/Gemini/OpenRouter por la API) | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
 | JESLY (`jesly_propuestas`) | Propuestas esperando aprobación | Sí, es JESLY | **Quedarse** |
 | JESLY Voz (`jesly_voz`) | Estado "Oye JESLY" + micrófono | Sí, es JESLY | **Quedarse** |
-| Anthropic (`ai_anthropic`) | Chat directo con Anthropic | Sí: JESLY Chat (router por la API) | Quitar (el cerebro ya cubre; evita llaves que JESLY no necesita) |
-| Google AI (`ai_google`) | Chat directo con Google AI | Sí: JESLY Chat (Gemini entra por el router) | Quitar |
-| OpenAI (`ai_openai`) | Chat directo con OpenAI | Sí: JESLY Chat | Quitar |
-| Ollama (`ai_ollama`) | Chat directo con Ollama local | Sí: JESLY Chat (ollama-local es proveedor del router) | Quitar |
-| LM Studio (`ai_lmstudio`) | Chat directo con LM Studio | Sí: JESLY Chat | Quitar |
+| Anthropic (`ai_anthropic`) | Chat directo con Anthropic | Sí: JESLY Chat (router por la API) | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar (el cerebro ya cubre; evita llaves que JESLY no necesita) |
+| Google AI (`ai_google`) | Chat directo con Google AI | Sí: JESLY Chat (Gemini entra por el router) | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
+| OpenAI (`ai_openai`) | Chat directo con OpenAI | Sí: JESLY Chat | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
+| Ollama (`ai_ollama`) | Chat directo con Ollama local | Sí: JESLY Chat (ollama-local es proveedor del router) | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
+| LM Studio (`ai_lmstudio`) | Chat directo con LM Studio | Sí: JESLY Chat | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
 | JESLY Chat (`jesly_chat`) | Chat con JESLY por la API | Sí, es JESLY | **Quedarse** |
-| Resend (`integration_resend`) | Email transaccional | No | Quitar (JC no lo usa; la API no lo expone) |
-| n8n (`integration_n8n`) | Estado de n8n | No | Quitar, salvo que quede alguna pill alimentada por n8n |
+| Resend (`integration_resend`) | Email transaccional | No | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar (JC no lo usa; la API no lo expone) |
+| n8n (`integration_n8n`) | Estado de n8n | No | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar, salvo que quede alguna pill alimentada por n8n |
 | Vercel (`integration_vercel`) | Estado de deploys en Vercel | No (la isla lo tiene "próximamente") | Quedarse solo si se cablea el feed de n8n; si no, es adorno |
 | GitHub (`integration_github`) | Estado de GitHub | Parcial: cuentas conectadas (PRs y build por la API) | Quedarse solo si se cablea el feed; el resto ya lo da Cuentas conectadas |
-| Notion (`integration_notion`) | Estado de Notion | No | Quitar |
-| Cal.com (`integration_calcom`) | Estado de Cal.com | No | Quitar |
-| Stripe (`integration_stripe`) | Estado de Stripe | No | Quitar |
-| Apple Music (`integration_music`) | Música en la isla (Mochi bailaba) | No (la nube no baila ni suena) | Quitar |
-| Spotify (`integration_spotify`) | Música en la isla | No | Quitar |
-| Mail (`integration_mail`) | Agente de correo (buscar, leer, responder, reglas) | Parcial: cuentas conectadas leen Gmail | Quitar por ahora: responder y reglas duplican lo que JESLY ya lee por la API y piden su propia configuración; se revisita si JC quiere responder correo desde la isla |
-| WhatsApp (`integration_whatsapp`) | WhatsApp en la isla (gateway GOWA local) | No (la isla lo tiene "próximamente — bot §16") | Quitar (pide un gateway local que JC no corre) |
-| Crypto (`integration_crypto`) | Portfolio cripto | No | Quitar |
-| Coucoudoro (`integration_coucoudoro`) | Temporizador trabajo/descanso local | No | Quitar (extra local sin coste, pero fuera del producto) |
-| Portfolio (`integration_portfolio`) | Portfolio de inversiones | No | Quitar |
+| Notion (`integration_notion`) | Estado de Notion | No | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
+| Cal.com (`integration_calcom`) | Estado de Cal.com | No | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
+| Stripe (`integration_stripe`) | Estado de Stripe | No | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
+| Apple Music (`integration_music`) | Música en la isla (Mochi bailaba) | No (la nube no baila ni suena) | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
+| Spotify (`integration_spotify`) | Música en la isla | No | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
+| Mail (`integration_mail`) | Agente de correo (buscar, leer, responder, reglas) | Parcial: cuentas conectadas leen Gmail | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar por ahora: responder y reglas duplican lo que JESLY ya lee por la API y piden su propia configuración; se revisita si JC quiere responder correo desde la isla |
+| WhatsApp (`integration_whatsapp`) | WhatsApp en la isla (gateway GOWA local) | No (la isla lo tiene "próximamente — bot §16") | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar (pide un gateway local que JC no corre) |
+| Crypto (`integration_crypto`) | Portfolio cripto | No | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
+| Coucoudoro (`integration_coucoudoro`) | Temporizador trabajo/descanso local | No | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar (extra local sin coste, pero fuera del producto) |
+| Portfolio (`integration_portfolio`) | Portfolio de inversiones | No | Quitada en Fase 5 sesión 3 (2026-11-27) — quitar |
 
-Resumen del inventario: quedarse 3 incondicionales (las de JESLY) +
-6 condicionales (VS Code, Cursor, Codex, Gemini CLI si JC los usa;
-GitHub y Vercel si se cablea su feed) + quitar 24. Las pills de
-agente solo muestran sesiones si los hooks están instalados, y eso
-es Fase 6 (conflicto de hooks: solo una app dueña de
-`~/.claude/settings.json`).
+Resumen del inventario tras la Fase 5, sesión 3: quedan 3
+incondicionales (las de JESLY) + 6 condicionales (VS Code, Cursor,
+Codex, Gemini CLI si JC los usa; GitHub y Vercel si se cablea su
+feed) y se quitaron 24. Las pills de agente solo muestran sesiones
+si los hooks están instalados, y eso es Fase 6 (conflicto de hooks:
+solo una app dueña de `~/.claude/settings.json`).
 
 **No son pills** (features aparte, no están en `PillCatalog`):
 
@@ -1332,12 +1335,45 @@ es Fase 6 (conflicto de hooks: solo una app dueña de
   → JESLY; es una consulta barata a Postgres, no un agente.
 - Conectar una cuenta (OAuth de Google, token de GitHub) sigue sin
   UI: es trabajo de servidor, no de esta sesión.
-- La decisión de pills NO se tomó: el inventario es propuesta, JC
-  decide qué se quita y eso es la sesión 3 (o parte de ella).
+- La decisión de pills se tomó y se aplicó en la sesión 3: las 24
+  se quitaron; las 6 condicionales quedan pendientes de la
+  confirmación de JC (¿usa Claude Code en VS Code, Cursor, Codex,
+  Gemini CLI? ¿se cablea el feed de GitHub/Vercel por n8n?).
 
-### 18.7 Para la Fase 5, sesión 3
+### 18.7 Hecho en la Fase 5, sesión 3 (2026-11-27)
 
-Aplicar la decisión de pills de JC (quitar las que diga, con sus
-borrados y su verificación); conectar cuentas desde la isla si JC
-lo pide (OAuth Google / token GitHub); resto del mapa F si queda
-algo; y Fase 6 (verificación en vivo + conflicto de hooks).
+Las 24 pills se quitaron del catálogo (`PillCatalog.all` pasa de 33
+a 9) y de todo sitio que las referenciaba: activas por defecto,
+ajustes (GroupBoxes de hooks, hints, Coucoudoro, búsqueda),
+`IslandViewContent` (tarjetas, botones, `openAgentTarget`,
+`statusDot`/`statusLabel`, `isHooks`), `HookServer` (ruta de
+permisos y `validateAgent` rechazan los agentes quitados; la rama
+`agy_pre_tool` responde "ask" sin tarjeta; borrados
+`agyApprovalGate` y `processAgyApproval`), controladores (sin
+maquinaria de pill; Mail sigue sondeando mientras Mail corre, para
+las páginas del Flow window; Música/Spotify siguen el seguimiento
+para la voz; Crypto/Portfolio quedan sin sondeo en vivo) y
+`ServiceDetailRunner`/`ServicePublisher` (solo quedan
+Vercel/GitHub). Borrados 9 archivos exclusivos de pills quitadas:
+`StripePoller`, `CalcomPoller`, `NotionPoller`, `ResendPoller`,
+`ClaudeDesktopChatWatcher`, `CoucoudoroEngine`,
+`CoucoudoroController`, `CoucoudoroViews`,
+`Tests/CoucoudoroEngineTests`. Verificación sin compilar: balance
+0 en los 28 archivos tocados; grep final con 0 hits de los 24 ids
+en `Sources` y `Tests` (salvo este documento, que es la
+especificación); las 3 de JESLY y las 6 condicionales siguen
+presentes. **Sin compilar: solo la Mac lo confirma.**
+
+### 18.8 Para la Fase 6
+
+Verificación en vivo de la sesión 3 en la Mac de JC (pull +
+`xcodegen` + build); conectar cuentas desde la isla si JC lo pide
+(OAuth Google / token GitHub); conflicto de hooks (solo una app
+dueña de `~/.claude/settings.json`; no instalar los hooks de
+Coucou hasta entonces). Pendientes sueltos: quitar el paso
+"Wardrobe tests" de `.github/workflows/build.yml` en el remoto
+(la App de GitHub no puede, 403); responder las 3 decisiones de
+`PRODUCT_NAME`/bundle id (firmado, CloudKit, nombre del `.app`);
+los instaladores de hooks de los agentes quitados siguen en el
+código como funciones sin uso desde Ajustes (limpieza posterior);
+`AgyPermissionRules` queda sin uso tras borrar `agyApprovalGate`.

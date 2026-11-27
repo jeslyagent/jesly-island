@@ -10,7 +10,7 @@ struct CryptoCardView: View {
     @ObservedObject private var crypto = CryptoController.shared
 
     private var accent: Color {
-        Color(hex: PillCatalog.definition(for: CryptoController.pillId)?.color ?? "#F7931A")
+        Color(hex: "#F7931A")
     }
 
     /// The coin of the last alert first, then the others in their order.

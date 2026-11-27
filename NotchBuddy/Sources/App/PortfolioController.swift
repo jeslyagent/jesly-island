@@ -201,7 +201,6 @@ enum PortfolioSettings {
 @MainActor
 final class PortfolioController: ObservableObject {
     static let shared = PortfolioController()
-    nonisolated static let pillId = "integration_portfolio"
 
     @Published private(set) var accounts: [PortfolioAccount] = []
     @Published private(set) var loaded = false
@@ -211,19 +210,9 @@ final class PortfolioController: ObservableObject {
     private var fetching = false
     private var cancellables = Set<AnyCancellable>()
 
-    private var isPillActive: Bool {
-        AppState.shared.activeIntegrations.contains(Self.pillId)
-    }
-
-    private init() {
-        AppState.shared.$activeIntegrations
-            .map { $0.contains(Self.pillId) }
-            .removeDuplicates()
-            .sink { [weak self] _ in
-                DispatchQueue.main.async { self?.updatePolling() }
-            }
-            .store(in: &cancellables)
-    }
+    // Fase 5, sesión 3: la pill de Portfolio se quitó — ya no hay sondeo en vivo.
+    // refresh() sigue sirviendo si los ajustes lo llaman; updatePolling solo apaga.
+    private init() {}
 
     func start() { updatePolling() }
 
@@ -239,27 +228,15 @@ final class PortfolioController: ObservableObject {
     }
 
     private func updatePolling() {
-        if isPillActive {
-            if timer == nil {
-                let t = Timer(timeInterval: 120, repeats: true) { _ in
-                    MainActor.assumeIsolated { PortfolioController.shared.refresh() }
-                }
-                t.tolerance = 20
-                RunLoop.main.add(t, forMode: .common)
-                timer = t
-            }
-            refresh()
-        } else {
-            timer?.invalidate()
-            timer = nil
-            accounts = []
-            loaded = false
-            lastUpdate = nil
-        }
+        timer?.invalidate()
+        timer = nil
+        accounts = []
+        loaded = false
+        lastUpdate = nil
     }
 
     func refresh() {
-        guard isPillActive, !fetching else { return }
+        guard !fetching else { return }
         let configured = PortfolioSettings.configuredAccounts
         guard !configured.isEmpty else { accounts = []; loaded = true; return }
         fetching = true

@@ -56,8 +56,6 @@ struct PillDefinition {
         case "integration_claude": return "Claude Code"
         case "agent_cursor":       return "Cursor"
         case "agent_codex":        return "Codex"
-        case "agent_hermes":       return "Hermes"
-        case "agent_claude-desktop": return "Claude Desktop"
         default:                   return String(localized: "Agent")
         }
     }
@@ -73,27 +71,11 @@ enum PillCatalog {
               category: .workspace, subtitle: String(localized: "Integration"),  source: .claudeCode),
         .init(id: "agent_cursor",        name: "Cursor",      color: "#C0C4CC",
               category: .workspace, subtitle: String(localized: "Integration"),  source: .agent),
-        .init(id: "agent_antigravity",   name: "Antigravity", color: "#E879F9",
-              category: .workspace, subtitle: String(localized: "Integration"),  source: .agent,  githubOnly: true),
         .init(id: "agent_codex",         name: "Codex",       color: "#2DD4BF",
               category: .workspace, subtitle: String(localized: "Integration"),  source: .agent,  githubOnly: true),
         // ── Agents ───────────────────────────────────────────────────────────
         .init(id: "agent_gemini",        name: "Gemini CLI",  color: "#8AB4F8",
               category: .agent,     subtitle: String(localized: "Agent"),        source: .agent,  githubOnly: true),
-        .init(id: "agent_copilot",       name: "Copilot CLI", color: "#818CF8",
-              category: .agent,     subtitle: String(localized: "Agent"),        source: .agent,  githubOnly: true),
-        .init(id: "agent_muse",          name: "Muse Code",   color: "#38BDF8",
-              category: .agent,     subtitle: String(localized: "Agent"),        source: .agent,  githubOnly: true),
-        .init(id: "agent_opencode",      name: "OpenCode",    color: "#4ADE80",
-              category: .agent,     subtitle: String(localized: "Agent"),        source: .agent,  githubOnly: true),
-        .init(id: "agent_amp",           name: "Amp",         color: "#F59E0B",
-              category: .agent,     subtitle: String(localized: "Agent"),        source: .agent,  githubOnly: true),
-        .init(id: "agent_hermes",        name: "Hermes",      color: "#C084FC",
-              category: .agent,     subtitle: String(localized: "Agent"),        source: .agent,  githubOnly: true),
-        // Claude Code sessions run from the Claude desktop app: the relay tags them
-        // `coucou_agent: claude-desktop` from CLAUDE_CODE_ENTRYPOINT, so nothing to install.
-        .init(id: "agent_claude-desktop", name: "Claude Desktop", color: "#D97757",
-              category: .agent,     subtitle: String(localized: "Agent"),        source: .agent),
         // ── JESLY (Fase 3) ───────────────────────────────────────────────────
         // Propuestas de JESLY esperando aprobación de JC: las trae
         // `JeslyProposalsPoller` de la API local (127.0.0.1:3000), cada 5 s.
@@ -115,16 +97,6 @@ enum PillCatalog {
         .init(id: "jesly_voz",           name: "JESLY Voz",   color: "#E8E0D0",
               category: .agent,     subtitle: String(localized: "Agent"),        source: .agent),
         // ── AI for the chat ──────────────────────────────────────────────────
-        .init(id: "ai_anthropic",        name: "Anthropic",   color: ChatProvider.anthropic.accentHex,
-              category: .ai,        subtitle: String(localized: "Chat"),         source: .n8n),
-        .init(id: "ai_google",           name: "Google AI",   color: ChatProvider.google.accentHex,
-              category: .ai,        subtitle: String(localized: "Chat"),         source: .n8n),
-        .init(id: "ai_openai",           name: "OpenAI",      color: ChatProvider.openai.accentHex,
-              category: .ai,        subtitle: String(localized: "Chat"),         source: .n8n),
-        .init(id: "ai_ollama",           name: "Ollama",      color: ChatProvider.ollama.accentHex,
-              category: .ai,        subtitle: String(localized: "Chat"),         source: .n8n),
-        .init(id: "ai_lmstudio",         name: "LM Studio",   color: ChatProvider.lmstudio.accentHex,
-              category: .ai,        subtitle: String(localized: "Chat"),         source: .n8n),
         // ── JESLY chat (Fase 4, sesión 1) ────────────────────────────────────
         // El chat de JESLY no habla con Anthropic/OpenAI directo: va
         // por la API local (`POST /v1/chat`, `JeslyAPIClient.chat`),
@@ -138,37 +110,10 @@ enum PillCatalog {
         .init(id: "jesly_chat",          name: "JESLY Chat",  color: "#E8E0D0",
               category: .ai,        subtitle: String(localized: "Chat"),         source: .agent),
         // ── Services ─────────────────────────────────────────────────────────
-        .init(id: "integration_resend",  name: "Resend",      color: "#22C55E",
-              category: .service,   subtitle: String(localized: "Integration"),  source: .n8n),
-        .init(id: "integration_n8n",     name: "n8n",         color: "#F29B38",
-              category: .service,   subtitle: String(localized: "Integration"),  source: .n8n),
         .init(id: "integration_vercel",  name: "Vercel",      color: "#7C5CFF",
               category: .service,   subtitle: String(localized: "Integration"),  source: .n8n),
         .init(id: "integration_github",  name: "GitHub",      color: "#F4505E",
               category: .service,   subtitle: String(localized: "Integration"),  source: .n8n),
-        .init(id: "integration_notion",  name: "Notion",      color: "#8C8C8C",
-              category: .service,   subtitle: String(localized: "Integration"),  source: .n8n),
-        .init(id: "integration_calcom",  name: "Cal.com",     color: "#C9956A",
-              category: .service,   subtitle: String(localized: "Integration"),  source: .n8n),
-        .init(id: "integration_stripe",  name: "Stripe",      color: "#0570DE",
-              category: .service,   subtitle: String(localized: "Integration"),  source: .n8n),
-        .init(id: "integration_music",   name: "Apple Music", color: "#FA2D48",
-              category: .service,   subtitle: String(localized: "Integration"),  source: .n8n, githubOnly: true),
-        .init(id: "integration_spotify", name: "Spotify",     color: "#1DB954",
-              category: .service,   subtitle: String(localized: "Integration"),  source: .n8n, githubOnly: true),
-        .init(id: "integration_mail",    name: "Mail",        color: "#2F8CFF",
-              category: .service,   subtitle: String(localized: "Integration"),  source: .n8n, githubOnly: true),
-        .init(id: "integration_whatsapp", name: "WhatsApp",  color: "#25D366",
-              category: .service,   subtitle: String(localized: "Integration"),  source: .n8n, githubOnly: true),
-        .init(id: "integration_crypto",    name: "Crypto",      color: "#F7931A",
-              category: .service,   subtitle: String(localized: "Integration"),  source: .n8n),
-        // Local countdown: work, then rest, until the user stops. No account, no network.
-        .init(id: "integration_coucoudoro", name: "Coucoudoro", color: "#0EA5E9",
-              category: .service,   subtitle: String(localized: "Integration"),  source: .n8n),
-        // GitHub build only, as intended when it was added (exchange API keys: not worth an
-        // App Review question for the store build).
-        .init(id: "integration_portfolio", name: "Portfolio",   color: "#FFD700",
-              category: .service,   subtitle: String(localized: "Integration"),  source: .n8n, githubOnly: true),
     ]
 
     /// Pills available in the current build target.

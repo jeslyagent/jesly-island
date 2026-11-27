@@ -242,7 +242,7 @@ struct SpotifyCardView: View {
             Text("Spotify")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(Color(hex: "#F5F6F8"))
-            Text(PillCatalog.definition(for: SpotifyController.pillId)?.subtitle ?? "Integration")
+            Text("Integration")
                 .font(.system(size: 11))
                 .foregroundColor(Color(hex: "#8E939C"))
             Spacer(minLength: 2)

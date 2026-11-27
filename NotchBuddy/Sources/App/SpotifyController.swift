@@ -30,7 +30,6 @@ struct SpotifyTrack: Equatable, Sendable {
 @MainActor
 final class SpotifyController: ObservableObject {
     static let shared = SpotifyController()
-    nonisolated static let pillId   = "integration_spotify"
     nonisolated static let bundleId = "com.spotify.client"
     nonisolated static let green    = "#1DB954"
 
@@ -55,10 +54,6 @@ final class SpotifyController: ObservableObject {
     private var artworkLoadingId: String?
     private var pendingVolume: Int?
     private var volumeTask: Task<Void, Never>?
-
-    private var isPillActive: Bool {
-        AppState.shared.activeIntegrations.contains(Self.pillId)
-    }
 
     private var automationGranted: Bool {
         UserDefaults.standard.bool(forKey: Self.grantedKey)
@@ -133,29 +128,14 @@ final class SpotifyController: ObservableObject {
         }
         notifTokens.append(tok3)
 
-        // Pill turned on → read the current track (this is when macOS asks for Automation, right
-        // after the user's own click). At launch, only if already granted. Pill turned off → clear.
-        var wasActive: Bool? = nil
-        AppState.shared.$activeIntegrations
-            .sink { [weak self] integrations in
-                guard let self else { return }
-                let active = integrations.contains(Self.pillId)
-                defer { wasActive = active }
-                guard active else { self.clearState(); return }
-                guard wasActive != true else { return }
-                if wasActive == false || self.automationGranted {
-                    // The publisher fires before the property is set: read once it is
-                    Task { @MainActor [weak self] in self?.refresh() }
-                }
-            }
-            .store(in: &cancellables)
     }
 
     // MARK: - State
 
     private func handleNotification(state: String?, trackId: String?, name: String?, artist: String?,
                                     album: String?, durationMs: Double?, position: Double?) {
-        guard isPillActive else { return }
+        // Fase 5, sesión 3: la pill de Spotify se quitó — el seguimiento sigue
+        // para los controles por voz; ya no hay tarjeta que la active.
         if state == "Stopped" { clearState(); return }
 
         if let trackId, !trackId.isEmpty {
@@ -188,7 +168,6 @@ final class SpotifyController: ObservableObject {
         if changed {
             artwork = artworkCache[newTrack.id]
         }
-        syncTaskName()
     }
 
     private func setPlaying(_ playing: Bool) {
@@ -214,23 +193,15 @@ final class SpotifyController: ObservableObject {
         artwork = nil
         isPlaying = false
         anchor(0)
-        syncTaskName()
     }
 
-    private func syncTaskName() {
-        guard let idx = AppState.shared.tasks.firstIndex(where: { $0.id == Self.pillId }) else { return }
-        let title = track?.isAd == true ? "Advertisement" : (track?.title ?? "")
-        AppState.shared.tasks[idx].name = title.isEmpty
-            ? (PillCatalog.definition(for: Self.pillId)?.name ?? "Spotify")
-            : title
-    }
 
     // MARK: - Reading Spotify
 
     /// Reads track, position, shuffle, repeat, volume and artwork URL. Never launches Spotify.
     /// The first call is what makes macOS ask for Automation.
     func refresh() {
-        guard isPillActive, isRunning else { return }
+        guard isRunning else { return }
         Task {
             let result = await runAppleScript("""
                 tell application id "com.spotify.client"
@@ -270,7 +241,6 @@ final class SpotifyController: ObservableObject {
                 end tell
             """)
             guard case .success(let v) = result, let ps = v.first?.text else { return }
-            guard isPillActive else { return }
             if ps == "stopped" || v.count < 11 { clearState(); return }
 
             let artworkURL = v[10].text.isEmpty ? nil : v[10].text

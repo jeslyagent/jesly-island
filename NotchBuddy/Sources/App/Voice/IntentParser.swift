@@ -218,12 +218,15 @@ enum IntentParser {
                     if ids.count >= 2 { return .pillAddMultiple(ids: ids) }
                 }
                 // Generic music word → musicPlay(nil) FIRST (before service-pill check so
-                // "musique" alias → integration_music doesn't force an appleMusic target)
+                // "musique" alias → the music pill doesn't force an appleMusic target)
                 if musicGenericWords.contains(clean) { return .musicPlay(target: nil) }
                 // Music service pills → musicPlay with explicit target
+                // Fase 5, sesión 3: las pills de música se quitaron; la voz sigue
+                // distinguiendo el destino por el nombre ("spotify" o "apple music")
+                // sin pasar por el catálogo.
                 if let id = EntityResolver.resolve(clean, from: pills),
                    musicServicePillIds.contains(id) {
-                    let target: MusicTarget = id == "integration_spotify" ? .spotify : .appleMusic
+                    let target: MusicTarget = clean.contains("spotify") ? .spotify : .appleMusic
                     return .musicPlay(target: target)
                 }
                 // "pilule" without "principale" → pillAdd (skip workspace check)
@@ -554,9 +557,9 @@ enum IntentParser {
             guard let idx = words.lastIndex(of: preposition), idx + 1 < words.count else { continue }
             let afterWords = Array(words[(idx+1)...])
             let entity = afterWords.joined(separator: " ")
-            if let id = EntityResolver.resolve(entity, from: pills) {
-                if id == "integration_spotify"  { return .spotify }
-                if id == "integration_music"    { return .appleMusic }
+            if EntityResolver.resolve(entity, from: pills) != nil {
+                if entity.contains("spotify") { return .spotify }
+                if entity.contains("apple music") || entity.contains("music") { return .appleMusic }
             }
         }
         return nil
@@ -770,9 +773,9 @@ enum IntentParser {
     ]
 
     // Music-service pill ids — pill detected but route to musicPlay
-    private static let musicServicePillIds: Set<String> = [
-        "integration_music", "integration_spotify",
-    ]
+    // Fase 5, sesión 3: las pills se quitaron; el conjunto queda vacío y la
+    // detección de destino vive en el nombre ("spotify" / "apple music").
+    private static let musicServicePillIds: Set<String> = []
 
     private static let playPrefixes: [[String]] = [
         ["lance", "la", "musique"], ["lance", "la", "chanson"],

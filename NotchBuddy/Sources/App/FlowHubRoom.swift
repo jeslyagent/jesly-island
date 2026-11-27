@@ -773,8 +773,8 @@ private struct RoomDoorCard: View {
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.black))
-            if isPlan || asking == "agent_antigravity" {
-                // The plan's choices and Antigravity's terminal prompt stay in the island.
+            if isPlan {
+                // The plan's choices stay in the island.
                 HStack {
                     Text("room.door.answer-island")
                         .font(.system(size: 12.5))
@@ -787,8 +787,8 @@ private struct RoomDoorCard: View {
                 HStack(spacing: 8) {
                     Button(String(localized: "Deny")) { HookServer.shared.sendApprovalDecision("deny", for: shownId) }
                         .buttonStyle(HubButtonStyle())
-                    // Codex, Copilot CLI and Muse Code do not support updatedPermissions.
-                    if !["agent_codex", "agent_copilot", "agent_muse"].contains(asking) {
+                    // Codex does not support updatedPermissions.
+                    if asking != "agent_codex" {
                         Button(String(localized: "Always")) { HookServer.shared.sendApprovalDecision("always", for: shownId) }
                             .buttonStyle(HubButtonStyle())
                     }

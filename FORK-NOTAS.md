@@ -879,8 +879,9 @@ de agentes CLI, los 5 chats directos de Coucou, Resend/n8n/Notion/
 Cal.com/Stripe, música, Mail, WhatsApp, Crypto, Coucoudoro,
 Portfolio). No son pills: Flow (Dictado quedarse, Notetaker a
 decidir), modo demo (quitar del producto final), resumen semanal
-(no se porta: lo sustituye el resumen diario). **Nada borrado en
-esta sesión: JC decide.**
+(no se porta: lo sustituye el resumen diario). **Aplicado en la
+Fase 5, sesión 3 (ver abajo): las 24 se quitaron; las 6
+condicionales quedan pendientes de la confirmación de JC.**
 
 ### 5. Verificación sin compilar (hecha)
 
@@ -906,3 +907,128 @@ vivo + conflicto de hooks).
 y guarda `workflow: JeslyWorkflow`, pero `JeslyWorkflow` no era `Sendable`.
 Corrección: `JeslyWorkflow: Codable, Identifiable, Equatable, Sendable`
 (todas sus propiedades son `String?`/`Bool?`, así que es seguro).
+
+## Fase 5, sesión 3 — Quitar las 24 pills (2026-11-27, sin pushear)
+
+Quitar = sacar del catálogo y de todo sitio que las referencie, sin
+dejar referencias rotas. Verificación sin compilar: balance 0 en
+los 28 archivos tocados (escáner Swift-aware); grep final con 0
+hits de los 24 ids en `NotchBuddy/Sources` y `NotchBuddy/Tests`
+(salvo `README-FASE2.md` §18.4, que es la especificación); las 3
+de JESLY y las 6 condicionales siguen presentes en `PillCatalog`.
+**Sin compilar: solo la Mac lo confirma.**
+
+### Pills quitadas (24)
+
+Otros agentes CLI: `agent_antigravity`, `agent_copilot`,
+`agent_muse`, `agent_opencode`, `agent_amp`, `agent_hermes`,
+`agent_claude-desktop`. Chats directos de Coucou: `ai_anthropic`,
+`ai_google`, `ai_openai`, `ai_ollama`, `ai_lmstudio`. Servicios:
+`integration_resend`, `integration_n8n` (solo la pill; el poller
+sigue alimentando `n8nRuns` para el Flow window),
+`integration_notion`, `integration_calcom`, `integration_stripe`,
+`integration_music`, `integration_spotify`, `integration_mail`,
+`integration_whatsapp`, `integration_crypto`,
+`integration_coucoudoro`, `integration_portfolio`.
+
+### Pills que quedan (9)
+
+3 de JESLY: `jesly_propuestas`, `jesly_voz`, `jesly_chat`.
+6 condicionales, pendientes de la confirmación de JC:
+`integration_claude` (VS Code), `agent_cursor`, `agent_codex`,
+`agent_gemini`, `integration_vercel`, `integration_github`.
+
+### Archivos cambiados (28)
+
+- `CoucouKit/PillCatalog.swift`: 24 entradas quitadas de `all`.
+- `CoucouKit/IslandTypes.swift`: `ChatProvider.pillID` e
+  `init?(pillID:)` sin los 5 casos `ai_*`.
+- `App/AppState.swift`: activas por defecto solo vercel + github.
+- `App/Voice/EntityResolver.swift`: alias de voz quitados.
+- `App/FlowHubRoom.swift`: `isPlan` sin Antigravity; "Always"
+  solo vetado para Codex.
+- `App/DemoEngine.swift`: rotación solo `integration_vercel`.
+- `CoucouKit/ServiceSnapshot.swift`: `phoneServices` solo
+  github + vercel.
+- `Widgets/CoucouWidgets.swift`: `regulars` solo
+  github/vercel/codex.
+- `Widgets/TeamConfiguration.swift`: casos de enum quitados
+  (antigravity, stripe, resend, calcom, n8n, notion).
+- `App/N8nPoller.swift`: quitado el bloque que actualizaba la
+  tarea de n8n; el poller sigue alimentando `n8nRuns`.
+- `App/Voice/IntentParser.swift`: destino de música por nombre
+  "spotify"/"apple music"; `musicServicePillIds` vacío.
+- `App/IslandViewContent.swift`: casos de `openAgentTarget`,
+  tarjeta de aprobación, ramas "Open Claude", `openClaudeDesktopApp`,
+  switches `isConfigured`/`openURL`/`statusDot`/`statusLabel`,
+  `isHooks`, helpers de datos (`n8nHasActivity`, `resendHasData`,
+  `stripeHasData`, `calcomHasData`, `notionHasData`, `musicIsActive`,
+  `mailHasData`, `isSpotify`), tarjetas y botones de los servicios
+  quitados, `pill()` y `hideJumpButton`.
+- `App/HookServer.swift`: `validateAgent` rechaza los agentes
+  quitados (con `removedAgentNames`); la ruta de permisos les
+  responde "ask" en su terminal; la rama `agy_pre_tool` responde
+  "ask" sin tarjeta; borrados `agyApprovalGate` y
+  `processAgyApproval`; casos de `handledNote`/`waitingNote`;
+  cláusula de `agent_claude-desktop`; bloque de plataforma de
+  Hermes. Se dejan `agyApprovalsKey`, `agyApprovalHookTimeout` y
+  los instaladores de hooks (los `@State` de Ajustes aún los
+  referencian; limpieza posterior).
+- `App/SettingsView.swift`: 6 GroupBoxes de hooks de agentes
+  quitados, `ClaudeDesktopChatSettingsSection`, sección y ajustes
+  de Coucoudoro, hints de `pillRow`, clave `ai_*` del chat.
+- Controladores (sin borrar enteros: sus funciones viven fuera de
+  la pill): `MusicController` y `SpotifyController` siguen el
+  seguimiento para la voz, sin `pillId`/`isPillActive`/`syncTaskName`;
+  `MailController` sondea mientras Mail corre (páginas del Flow
+  window); `WhatsAppController` arranca solo con el ajuste y sus
+  helpers de insignia quedan vacíos; `CryptoController` y
+  `PortfolioController` quedan sin sondeo en vivo (`refresh()` por
+  llamada sigue sirviendo). Vistas: colores literales en
+  `CryptoViews`/`PortfolioViews`, `"Integration"` en
+  `SpotifyViews`, sin aviso de slot en `WhatsAppViews`.
+- `App/PhoneLink/ServiceDetailRunner.swift`: casos y funciones
+  `stripe`/`resend`/`calcom`/`n8n`/`notion` quitados; quedan
+  vercel/github.
+- `App/PhoneLink/ServicePublisher.swift`: funciones `stripe`/
+  `resend`/`calcom`/`n8n`/`notion` quitadas; `all(from:)` solo
+  github + vercel.
+- `App/AppDelegate.swift`: arranques de los pollers/watcher/
+  controlador borrados.
+- `App/SettingsSearch.swift`: 6 entradas de agentes quitados y
+  palabras clave de Coucoudoro quitadas.
+
+### Archivos borrados (9, exclusivos de una pill quitada)
+
+`StripePoller.swift`, `CalcomPoller.swift`, `NotionPoller.swift`,
+`ResendPoller.swift`, `ClaudeDesktopChatWatcher.swift`,
+`CoucoudoroEngine.swift`, `CoucoudoroController.swift`,
+`CoucoudoroViews.swift`, `Tests/CoucoudoroEngineTests.swift`.
+Justificación: cada uno solo servía a su pill; nada más los
+referenciaba salvo comentarios (`AppState`, `VoiceDataSources`) y
+los campos de clave de API en Ajustes, que se quedan (son claves,
+no pills).
+
+### Qué NO se tocó
+
+Bundle id, entitlements, `project.pbxproj`, modo demo, `ChatProvider`
+(como enum se queda; solo perdió su mapeo a pills), `MochiRoom`,
+`MochiMood`, `BotEngine`, WAV, `whats-new.json`, `PRODUCT_NAME`,
+nada de JESLY, nada de Windows/Linux/Android. Los campos de clave
+de API (Stripe, Resend, Cal.com, Notion) siguen en Ajustes →
+Integrations aunque sus pills ya no existan.
+
+### Qué debe verse tras verificar
+
+Ajustes → Active pills: solo 9 pills — 3 de JESLY
+(`jesly_propuestas`, `jesly_voz`, `jesly_chat`) + 6 condicionales
+(VS Code, Cursor, Codex, Gemini CLI, Vercel, GitHub). Las
+activas por defecto son solo Vercel y GitHub. Con la API apagada
+nada cambia: las pills de JESLY muestran 0 propuestas sin
+errores, como antes.
+
+### Pendiente
+
+Verificación en la Mac de JC (pull + `xcodegen` + Shift+Cmd+K +
+Cmd+B + Cmd+R). Si BUILD SUCCEEDED: sesión verificada; luego
+Fase 6 (verificación en vivo + conflicto de hooks).

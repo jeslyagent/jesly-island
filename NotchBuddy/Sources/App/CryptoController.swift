@@ -145,7 +145,6 @@ enum CryptoSettings {
 @MainActor
 final class CryptoController: ObservableObject {
     static let shared = CryptoController()
-    nonisolated static let pillId = "integration_crypto"
 
     /// Quotes in the order the coins were listed; a coin the exchange doesn't list is absent.
     @Published private(set) var quotes: [CryptoQuote] = []
@@ -164,20 +163,9 @@ final class CryptoController: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var lastSettings = ""
 
-    private var isPillActive: Bool {
-        AppState.shared.activeIntegrations.contains(Self.pillId)
-    }
-
-    private init() {
-        AppState.shared.$activeIntegrations
-            .map { $0.contains(Self.pillId) }
-            .removeDuplicates()
-            .sink { [weak self] _ in
-                // The sink runs before the property changes: decide on the next turn.
-                DispatchQueue.main.async { self?.updatePolling() }
-            }
-            .store(in: &cancellables)
-    }
+    // Fase 5, sesión 3: la pill de Crypto se quitó — ya no hay sondeo en vivo.
+    // refresh() sigue sirviendo si los ajustes lo llaman; updatePolling solo apaga.
+    private init() {}
 
     func start() { updatePolling() }
 
@@ -195,28 +183,15 @@ final class CryptoController: ObservableObject {
     }
 
     private func updatePolling() {
-        if isPillActive {
-            if timer == nil {
-                let t = Timer(timeInterval: 60, repeats: true) { _ in
-                    MainActor.assumeIsolated { CryptoController.shared.refresh() }
-                }
-                t.tolerance = 10
-                RunLoop.main.add(t, forMode: .common)
-                timer = t
-            }
-            lastSettings = "\(CryptoSettings.exchange.rawValue)|\(CryptoSettings.currency)|\(CryptoSettings.coins.joined(separator: ","))"
-            refresh()
-        } else {
-            timer?.invalidate()
-            timer = nil
-            quotes = []
-            missing = []
-            loaded = false
-            lastUpdate = nil
-            reference = [:]
-            alertSymbol = nil
-            lastCandles = .distantPast
-        }
+        timer?.invalidate()
+        timer = nil
+        quotes = []
+        missing = []
+        loaded = false
+        lastUpdate = nil
+        reference = [:]
+        alertSymbol = nil
+        lastCandles = .distantPast
     }
 
     func refreshIfStale(minAge: TimeInterval = 20) {
@@ -225,7 +200,7 @@ final class CryptoController: ObservableObject {
     }
 
     func refresh() {
-        guard isPillActive, !fetching else { return }
+        guard !fetching else { return }
         let exchange = CryptoSettings.exchange
         let currency = CryptoSettings.currency
         let coins = CryptoSettings.coins
@@ -300,10 +275,8 @@ final class CryptoController: ObservableObject {
             guard CryptoSettings.alertEnabled, move >= CryptoSettings.alertPercent else { continue }
             reference[q.symbol] = q.price
             alertSymbol = q.symbol
-            let state = AppState.shared
-            if state.mode != .expanded, state.tasks.contains(where: { $0.id == Self.pillId }) {
-                state.focusId = Self.pillId
-            }
+            // Fase 5, sesión 3: la pill de Crypto se quitó — la alerta ya no enfoca
+            // ninguna tarjeta; el aviso sigue sonando por .hookReveal.
             NotificationCenter.default.post(name: .hookReveal, object: nil)
             break   // one alert at a time
         }

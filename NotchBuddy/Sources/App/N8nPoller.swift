@@ -296,25 +296,9 @@ final class N8nPoller: @unchecked Sendable {
         state.n8nRuns = Array(([N8nRun(workflow: name, detail: detail, success: success, date: date)]
                                + state.n8nRuns).prefix(10))
 
-        guard let idx = state.tasks.firstIndex(where: { $0.id == "integration_n8n" }) else { return }
-        let focused = state.focusId == "integration_n8n"
-
-        state.tasks[idx].state = success ? .finished : .error
-        state.tasks[idx].steps = detail != nil ? [name, detail!] : [name]
-
-        if !focused {
-            state.tasks[idx].pillBadge = success ? .finished : .error
-        }
+        // Fase 5, sesión 3: la pill de n8n ya no existe; la ejecución
+        // solo queda en n8nRuns (la usa el Flow window) y suena el aviso.
         SoundEngine.shared.play(success ? "finish" : "error")
-
-        // Auto-clear after 60s (user needs time to read detail)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 60) {
-            guard let i = state.tasks.firstIndex(where: { $0.id == "integration_n8n" }) else { return }
-            guard state.tasks[i].state == .finished || state.tasks[i].state == .error else { return }
-            state.tasks[i].state    = .idle
-            state.tasks[i].steps    = []
-            state.tasks[i].pillBadge = nil
-        }
     }
 
     // MARK: - Logging

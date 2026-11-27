@@ -32,9 +32,9 @@ final class DemoEngine: ObservableObject {
     private var demoInjectedTaskIds: [String] = []   // integration task IDs added by demo
     private var realTaskIdsAtStart: Set<String> = [] // real task IDs that existed before demo
     private var demoCycleIndex: Int = 0
+    // Fase 5, sesión 3: solo queda integration_vercel de las 5 que rotaban.
     private let rotatingIntegrationIds = [
-        "integration_stripe", "integration_calcom",
-        "integration_n8n", "integration_notion", "integration_vercel"
+        "integration_vercel"
     ]
     private var demoDiffIds: [String: [Int]] = [:]   // [pillId: [diffId]]
     private var lastApprovalDecision: String = "allow"
@@ -416,10 +416,8 @@ final class DemoEngine: ObservableObject {
         let rotId = rotatingIntegrationIds[demoCycleIndex % rotatingIntegrationIds.count]
         if !s.tasks.contains(where: { $0.id == rotId }),
            let def = PillCatalog.available.first(where: { $0.id == rotId }) {
-            let rotState: BotState = (rotId == "integration_n8n") ? .finished : .idle
-            let rotSteps: [String] = (rotId == "integration_n8n")
-                ? ["Notify on new Stripe payment", "3 nodes executed", "Workflow success"]
-                : []
+            let rotState: BotState = .idle
+            let rotSteps: [String] = []
             s.tasks.append(AgentTask(id: def.id, name: def.name, color: def.color,
                                      state: rotState, steps: rotSteps, source: def.source, isIntegration: true))
             if !demoInjectedTaskIds.contains(rotId) { demoInjectedTaskIds.append(rotId) }

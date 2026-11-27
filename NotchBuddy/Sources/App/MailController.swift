@@ -62,7 +62,6 @@ struct MailMessage: Identifiable, Equatable, Sendable {
 @MainActor
 final class MailController: ObservableObject {
     static let shared = MailController()
-    nonisolated static let pillId = "integration_mail"
     nonisolated static let bundleId = "com.apple.mail"
 
     /// Latest messages of all inboxes, newest first.
@@ -105,10 +104,6 @@ final class MailController: ObservableObject {
     private var lastFetch: Date = .distantPast
     private let queue = DispatchQueue(label: "fr.louisraille.coucou.mail")
 
-    private var isPillActive: Bool {
-        AppState.shared.activeIntegrations.contains(Self.pillId)
-    }
-
     /// The Mail section's automatic sorting reads the inboxes too, pill on or off.
     private var autoSortOn: Bool { MailTriageStore.shared.settings.autoSort }
 
@@ -144,15 +139,6 @@ final class MailController: ObservableObject {
             }
         })
 
-        // Pill turned on → first read; turned off → stop and forget everything.
-        AppState.shared.$activeIntegrations
-            .map { $0.contains(Self.pillId) }
-            .removeDuplicates()
-            .sink { [weak self] _ in
-                // The sink runs before the property changes: decide on the next turn.
-                DispatchQueue.main.async { self?.updatePolling() }
-            }
-            .store(in: &cancellables)
     }
 
     /// Called once at launch so the controller starts observing.
@@ -164,8 +150,10 @@ final class MailController: ObservableObject {
         NSWorkspace.shared.runningApplications.contains { $0.bundleIdentifier == bundleId }
     }
 
+    // Fase 5, sesión 3: la pill de Mail se quitó — se sondea mientras Mail corre,
+    // para que las páginas de Mail del Flow window sigan cargando.
     private func updatePolling() {
-        if (isPillActive || autoSortOn) && isMailRunning {
+        if isMailRunning {
             if timer == nil {
                 let t = Timer(timeInterval: 60, repeats: true) { _ in
                     MainActor.assumeIsolated { MailController.shared.refresh() }
@@ -178,17 +166,15 @@ final class MailController: ObservableObject {
         } else {
             timer?.invalidate()
             timer = nil
-            if !isPillActive {
-                messages = []
-                unreadCount = nil
-                previews = [:]
-                loaded = false
-                results = nil
-                searchPool = nil
-                query = ""
-                filter = .all
-                shownCount = Self.keep
-            }
+            messages = []
+            unreadCount = nil
+            previews = [:]
+            loaded = false
+            results = nil
+            searchPool = nil
+            query = ""
+            filter = .all
+            shownCount = Self.keep
         }
     }
 
@@ -200,7 +186,7 @@ final class MailController: ObservableObject {
 
     /// Reads the unread count and the latest messages of every inbox.
     func refresh() {
-        guard isPillActive || autoSortOn, Self.mailRunning(), !fetching else { return }
+        guard Self.mailRunning(), !fetching else { return }
         isMailRunning = true
         fetching = true
         lastFetch = Date()
@@ -211,12 +197,10 @@ final class MailController: ObservableObject {
             fetching = false
             guard case .success(let values) = result, let text = values.first else { return }
             let parsed = Self.parseList(text)
-            if isPillActive {
-                unreadCount = parsed.unread
-                let newest = Array(parsed.messages.sorted { $0.date > $1.date }.prefix(shownCount))
-                if newest != messages { messages = newest }
-                loaded = true
-            }
+            unreadCount = parsed.unread
+            let newest = Array(parsed.messages.sorted { $0.date > $1.date }.prefix(shownCount))
+            if newest != messages { messages = newest }
+            loaded = true
             await triage(parsed.messages)
         }
     }

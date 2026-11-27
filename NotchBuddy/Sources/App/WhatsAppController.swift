@@ -83,7 +83,6 @@ enum WhatsAppSettings {
 @MainActor
 final class WhatsAppController: ObservableObject {
     static let shared = WhatsAppController()
-    nonisolated static let pillId = "integration_whatsapp"
     nonisolated static let webhookPath = "/whatsapp"
 
     enum Link: Equatable {
@@ -151,17 +150,11 @@ final class WhatsAppController: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     private var shouldRun: Bool {
-        WhatsAppSettings.enabled && AppState.shared.activeIntegrations.contains(Self.pillId)
+        // Fase 5, sesión 3: la pill de WhatsApp se quitó — basta con que esté activado.
+        WhatsAppSettings.enabled
     }
 
     private init() {
-        // Pill turned on or off from anywhere: follow it on the next turn (the sink runs
-        // before the property changes).
-        AppState.shared.$activeIntegrations
-            .map { $0.contains(Self.pillId) }
-            .removeDuplicates()
-            .sink { [weak self] _ in DispatchQueue.main.async { self?.update() } }
-            .store(in: &cancellables)
         // Back from sleep: ask the gateway again at once.
         NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didWakeNotification)
             .sink { [weak self] _ in
@@ -179,15 +172,10 @@ final class WhatsAppController: ObservableObject {
         update()
     }
 
-    /// Turns the integration on or off; on also makes room for its pill when a slot is free.
+    /// Turns the integration on or off.
     func setEnabled(_ on: Bool) {
+        // Fase 5, sesión 3: la pill de WhatsApp se quitó — el interruptor es solo el ajuste.
         WhatsAppSettings.enabled = on
-        let state = AppState.shared
-        if on, !state.activeIntegrations.contains(Self.pillId), state.activeIntegrations.count < 4 {
-            state.toggleIntegration(Self.pillId)
-        } else if !on, state.activeIntegrations.contains(Self.pillId) {
-            state.toggleIntegration(Self.pillId)
-        }
         settingsChanged()
     }
 
@@ -324,12 +312,8 @@ final class WhatsAppController: ObservableObject {
     }
 
     /// The discreet error pill: the pill's red badge while the gateway is down.
-    private func showDown(_ down: Bool) {
-        let state = AppState.shared
-        guard let i = state.tasks.firstIndex(where: { $0.id == Self.pillId }) else { return }
-        if down { state.tasks[i].pillBadge = .error }
-        else if state.tasks[i].pillBadge == .error { state.tasks[i].pillBadge = nil }
-    }
+    /// Fase 5, sesión 3: la pill de WhatsApp se quitó — ya no hay insignia que poner.
+    private func showDown(_ down: Bool) {}
 
     /// One check from Settings' "Test connection": what the gateway says, in a sentence.
     func testConnection() async -> String {
@@ -553,49 +537,27 @@ final class WhatsAppController: ObservableObject {
         }
     }
 
-    private func clearBadge() {
-        let state = AppState.shared
-        guard let i = state.tasks.firstIndex(where: { $0.id == Self.pillId }) else { return }
-        state.tasks[i].pillBadge = nil
-    }
+    // Fase 5, sesión 3: la pill de WhatsApp se quitó — ya no hay insignia que limpiar.
+    private func clearBadge() {}
 
     // MARK: - Mochi
 
     /// A new message reaches you: Mochi's little "happy" emote, the global sound setting, and
     /// the pill lights up under the island's usual rules. Silent during a Focus.
     private func announce(_ message: WAMessage) {
+        // Fase 5, sesión 3: la pill de WhatsApp se quitó — el aviso ya no enciende
+        // ninguna tarjeta; quedan el emote y el sonido.
         if WhatsAppSettings.respectFocus && focusIsOn { return }
-        let state = AppState.shared
-        guard let idx = state.tasks.firstIndex(where: { $0.id == Self.pillId }) else { return }
-        let name = inbox.conversations[WAJID.normalized(message.chat)]?.name ?? WAJID.displayNumber(message.chat)
-        state.tasks[idx].state = .finished
-        // Only the conversation's name on the pill, never the text.
-        state.tasks[idx].steps = [name]
-        if state.focusId != Self.pillId { state.tasks[idx].pillBadge = .finished }
         // A burst of messages is one reaction, not ten.
         if Date().timeIntervalSince(lastAnnounce) > 4 {
             lastAnnounce = Date()
             NotificationCenter.default.post(name: .triggerEmote, object: BotEmote.happy)
             SoundEngine.shared.play("pop")
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 60) {
-            let state = AppState.shared
-            guard let i = state.tasks.firstIndex(where: { $0.id == Self.pillId }),
-                  state.tasks[i].state == .finished,
-                  Date().timeIntervalSince(WhatsAppController.shared.lastAnnounce) >= 59 else { return }
-            state.tasks[i].state = .idle
-            state.tasks[i].steps = []
-            state.tasks[i].pillBadge = nil
-        }
     }
 
-    private func resetTask() {
-        let state = AppState.shared
-        guard let i = state.tasks.firstIndex(where: { $0.id == Self.pillId }) else { return }
-        state.tasks[i].state = .idle
-        state.tasks[i].steps = []
-        state.tasks[i].pillBadge = nil
-    }
+    // Fase 5, sesión 3: la pill de WhatsApp se quitó — ya no hay tarea que resetear.
+    private func resetTask() {}
 
     // MARK: - Focus
 

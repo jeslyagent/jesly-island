@@ -376,7 +376,9 @@ final class AppState: ObservableObject {
     }
 
     // Active integration pills (main workspace pill excluded). Max 4.
-    @Published var activeIntegrations: Set<String> = ["integration_resend", "integration_n8n", "integration_vercel", "integration_github"] {
+    // Fase 5, sesión 3: dos pills de servicio se quitaron; quedan las 2
+    // condicionales que JC aún no confirma.
+    @Published var activeIntegrations: Set<String> = ["integration_vercel", "integration_github"] {
         didSet {
             if let data = try? JSONEncoder().encode(Array(activeIntegrations)) {
                 UserDefaults.standard.set(data, forKey: "activeIntegrations")
