@@ -139,7 +139,7 @@ public struct ChatAttachment: Codable, Equatable, Sendable {
 
 /// Workflow (`GET /v1/workflows`, `routes/workflows.ts`).
 /// (Fase 5, sesión 1: los workflows llegan aquí.)
-public struct JeslyWorkflow: Codable, Identifiable, Equatable {
+public struct JeslyWorkflow: Codable, Identifiable, Equatable, Sendable {
     public var id: String
     public var name: String
     public var task: String?

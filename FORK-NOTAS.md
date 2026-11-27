@@ -897,3 +897,12 @@ Aplicar la decisión de pills de JC (quitar las que diga, con sus
 borrados y verificación); conectar cuentas desde la isla si JC lo
 pide; resto del mapa F si queda algo; luego Fase 6 (verificación en
 vivo + conflicto de hooks).
+
+### 6. Corrección tras BUILD FAILED de JC (2026-11-27 19:23 AST)
+
+1 error, 8 warnings (los warnings son viejos, no de JESLY). Error:
+`Stored property 'workflow' of 'Sendable'-conforming struct
+'JeslyDigestScheduleResponse'` — `JeslyDigestScheduleResponse` es `Sendable`
+y guarda `workflow: JeslyWorkflow`, pero `JeslyWorkflow` no era `Sendable`.
+Corrección: `JeslyWorkflow: Codable, Identifiable, Equatable, Sendable`
+(todas sus propiedades son `String?`/`Bool?`, así que es seguro).
