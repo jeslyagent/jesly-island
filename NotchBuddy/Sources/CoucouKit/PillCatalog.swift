@@ -94,6 +94,16 @@ enum PillCatalog {
         // `coucou_agent: claude-desktop` from CLAUDE_CODE_ENTRYPOINT, so nothing to install.
         .init(id: "agent_claude-desktop", name: "Claude Desktop", color: "#D97757",
               category: .agent,     subtitle: String(localized: "Agent"),        source: .agent),
+        // ── JESLY (Fase 3) ───────────────────────────────────────────────────
+        // Propuestas de JESLY esperando aprobación de JC: las trae
+        // `JeslyProposalsPoller` de la API local (127.0.0.1:3000), cada 5 s.
+        // `source: .agent` es solo el metadato de origen del catálogo: los
+        // datos NO vienen de un hook (`nb-hook`), sino del sondeo a la API.
+        // La tarjeta de Propuesta/Permiso llega en la sesión 2; hasta
+        // entonces la pill solo aparece en Ajustes → Active pills (hay que
+        // activar una pill a la vez: el máximo es 4 y por defecto ya hay 4).
+        .init(id: "jesly_propuestas", name: "JESLY", color: "#E8E0D0",
+              category: .agent,     subtitle: String(localized: "Agent"),        source: .agent),
         // ── AI for the chat ──────────────────────────────────────────────────
         .init(id: "ai_anthropic",        name: "Anthropic",   color: ChatProvider.anthropic.accentHex,
               category: .ai,        subtitle: String(localized: "Chat"),         source: .n8n),

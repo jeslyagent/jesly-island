@@ -508,3 +508,81 @@ hasta que JC corra `xcodegen` en su Mac (su flujo habitual) — ver §10.6.
 | `NotchBuddy/Sources/App/IslandViewContent.swift` | Comentario del guardarropa sin mencionar `Outfit` |
 | `.github/workflows/build.yml` | Paso `Wardrobe tests` eliminado |
 | + 6 borrados (§10.4) | Ver tabla |
+
+## 11. Fase 3, sesión 1 — cliente API + pill `jesly_propuestas` (2026-11-27, local, SIN pushear, SIN compilar)
+
+Fase 2 verificada completa en la Mac de JC antes de empezar (sesiones 1–5
+corriendo; última 14:09 AST, Running Coucou, 0 errores, Flow Hub sin Mochis).
+
+### 11.1 Cliente portado (solo propuestas; chat/workflows/skills/voz en Fases 4–5)
+
+Origen: `jeslyagent/Jesly-agent-ai`, `apps/island/Sources/JeslyIsland/Api/`,
+HEAD `3e2a59db` (el `3e2a59d` corto no resuelve como ref en el conector;
+el SHA completo es `3e2a59db612ac5c623d79ea601bcfe8768ce18fd`).
+
+| Archivo nuevo en este fork | Origen | Qué cubre |
+|---|---|---|
+| `NotchBuddy/Sources/JeslyIsland/Api/JeslyAPIClient.swift` (169 l.) | mismo nombre | Transporte + errores + solo propuestas. Endpoints exactos como en la isla (verificado por grep contra el origen): `GET /v1/tasks?status=esperando_aprobacion&kind=propuesta`, `GET /v1/tasks?status=planificada&kind=propuesta`, `GET /v1/tasks?status=aplicada&kind=propuesta`, `POST /v1/tasks/:id/<acción>` con `ProposalAction.endpoint` (`approve`/`reject`/`discard`/`apply`/`revert`/`execute`). La decisión vale para el `task id` exacto: sin hook, sin fd de `nb-hook` abierto (diferencia con Coucou, documentada en el archivo). |
+| `NotchBuddy/Sources/JeslyIsland/Api/JeslyModels.swift` (197 l.) | mismo nombre | `JeslyTask` (+ `availableActions` por estado), `ProposalAction`, `ChatResponse`, `ChatAttachment`, `JeslyWorkflow`, `JeslySkill`, `WakeStatus`. Los 4 últimos sin uso en esta sesión (llegan en Fases 4–5); son datos puros, no rompen nada. |
+| `NotchBuddy/Sources/JeslyIsland/Api/ApiKeyStore.swift` (77 l.) | mismo nombre | Copia verbatim. Llavero servicio `com.jesly.island`, cuenta `jesly-api-key`; fallback a `JESLY_API_KEY` de entorno; sin clave la API local acepta igual. La clave nunca se hardcodea ni se registra en logs. |
+| `NotchBuddy/Sources/JeslyIsland/Api/JeslyProposalsPoller.swift` (82 l.) | **Nuevo, sin origen** | Sondeo cada 5 s (como la isla) de `pendingProposals()`; publica `proposals`, `apiReachable`, `lastError`. Solo sondea con la pill activa y respetando `DemoEngine.isPollerPaused`. Cliente nuevo por sondeo (relee la clave del llavero cada vez). |
+
+### 11.2 UNA diferencia deliberada con el origen: `ChatProvider` NO se porta
+
+Coucou ya tiene un `enum ChatProvider` (`IslandTypes.swift:115`); dos tipos
+con el mismo nombre en el mismo módulo no compilan. El `ChatProvider`
+struct de la isla (lista de proveedores del router) se porta en la Fase 4
+como **`JeslyChatProvider`**. Ningún método de esta sesión lo usa (verificado
+por grep: solo Coucou tiene el tipo; en `JeslyModels.swift` solo aparece en
+un comentario).
+
+### 11.3 Poller básico: qué hace con la API apagada
+
+No es un error que rompa nada: `apiReachable = false`, `lastError` guarda
+el motivo (`serverUnreachable` → "La API de JESLY no responde en
+127.0.0.1:3000…") y la lista anterior se conserva (una lista vieja es
+mejor que un parpadeo a vacío cada 5 s). La pill muestra 0 propuestas
+pendientes. El cliente nuevo por sondeo relee la clave del llavero cada
+vez, así que pegar la clave en Ajustes (sesión 2) no exige reiniciar.
+
+### 11.4 Pill registrada (solo registro + poller; la tarjeta va en la sesión 2)
+
+- `PillCatalog.swift`: `.init(id: "jesly_propuestas", name: "JESLY",
+  color: "#E8E0D0", category: .agent, subtitle: "Agent", source: .agent)`,
+  tras `agent_claude-desktop`. Color hueso #E8E0D0 (halo de la nube).
+  `source: .agent` es solo metadato del catálogo: los datos vienen del
+  sondeo a la API, NO de un hook. Subtítulo `"Agent"` (clave existente;
+  no hay clave `"Proposals"` en `xcstrings`, no se inventa una).
+- `AppDelegate.swift` (`setupIsland`, tras `GithubPoller`):
+  `JeslyProposalsPoller.shared.start()`. Ningún otro archivo de Coucou
+  tocado: ni `ApprovalQueue`, ni `AskQuestion`, ni `ChatProvider`, ni
+  `HookServer`, ni `project.yml`, ni `project.pbxproj`.
+- La pill aparece en **Ajustes → Active pills** (categoría Agents),
+  porque `SettingsView` lista `PillCatalog.available` por categoría.
+  OJO: solo caben 4 pills activas y por defecto ya hay 4 (Resend, n8n,
+  Vercel, GitHub): para activar `jesly_propuestas` hay que desactivar
+  una. La tarjeta de Propuesta/Permiso NO existe todavía: la pill sin
+  tarjeta no pone ninguna `AgentTask` en la isla. Eso es la sesión 2.
+
+### 11.5 Verificación sin compilar (hecha)
+
+Balance llaves/paréntesis/corchetes 0 en los 6 archivos (4 nuevos +
+`PillCatalog.swift` + `AppDelegate.swift`); endpoints del cliente
+idénticos a los de la isla (grep de las 3 queries + la acción);
+sin colisión de nombres (`JeslyTask`, `JeslyWorkflow`, `JeslySkill`,
+`WakeStatus`, `ChatResponse`, `ChatAttachment`, `ProposalAction`,
+`JeslyAPIClient`, `ApiKeyStore` no existen en Coucou);
+`project.yml` sin tocar (el grupo `Sources` ya incluye
+`Sources/JeslyIsland/Api/`, como pasó con `Character/` en la Fase 2).
+**No afirmo que compile** — solo la Mac lo confirma.
+
+### 11.6 Para la sesión 2
+
+Tarjeta Propuesta/Permiso reutilizando la UI de `ApprovalQueue` +
+`AskQuestion.swift` con backend `proposalAction(taskId:)`; entrada de
+la clave en Ajustes (`ApiKeyStore.save`); acciones por estado según
+`JeslyTask.availableActions` (+ "Siempre" como regla revocable, mapa A
+del plan). Riesgos que siguen: la API local apagada deja la pill vacía
+(por diseño, §11.3); si JC cambia el grupo de acceso del llavero en
+la Fase 6, revisar `ApiKeyStore` (el servicio `com.jesly.island` hoy
+no depende del bundle id del build).

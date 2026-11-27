@@ -414,3 +414,80 @@ con Shift+Cmd+K (lección de la sesión 4).
 `whats-new.json`: intactos por decisión del encargo. `WardrobeView`
 sigue como aviso y la ruta `.wardrobe` sigue existiendo. `PRODUCT_NAME`
 + bundle id + firmado: NO tocados (ver README-FASE2 §8).
+
+---
+
+## FASE 3, SESIÓN 1 — cliente API + pill `jesly_propuestas` (2026-11-27, local, SIN pushear, SIN compilar)
+
+Fase 2 verificada completa en la Mac de JC antes de empezar (sesiones 1–5
+corriendo; última 14:09 AST, Running Coucou, 0 errores, Flow Hub sin Mochis).
+
+### 1. Cliente portado (origen: isla actual, HEAD `3e2a59db`)
+
+`jeslyagent/Jesly-agent-ai`, `apps/island/Sources/JeslyIsland/Api/`
+(el `3e2a59d` corto no resuelve como ref en el conector; SHA completo
+`3e2a59db612ac5c623d79ea601bcfe8768ce18fd`).
+
+- `NotchBuddy/Sources/JeslyIsland/Api/JeslyAPIClient.swift` (nuevo, 169 l.):
+  transporte + errores + **solo propuestas**. Endpoints exactos como en la
+  isla (grep contra el origen): `GET /v1/tasks?status=esperando_aprobacion&kind=propuesta`,
+  `GET /v1/tasks?status=planificada&kind=propuesta`,
+  `GET /v1/tasks?status=aplicada&kind=propuesta`,
+  `POST /v1/tasks/:id/<acción>` (`approve`/`reject`/`discard`/`apply`/`revert`/`execute`).
+  La decisión vale para el `task id` exacto, sin hook (documentado en el archivo).
+  Chat, workflows, habilidades y voz NO se portan en esta sesión (Fases 4–5).
+- `NotchBuddy/Sources/JeslyIsland/Api/JeslyModels.swift` (nuevo, 197 l.):
+  `JeslyTask` (+ `availableActions`), `ProposalAction`, `ChatResponse`,
+  `ChatAttachment`, `JeslyWorkflow`, `JeslySkill`, `WakeStatus`. Los 4 últimos
+  sin uso hasta Fases 4–5; son datos puros.
+- `NotchBuddy/Sources/JeslyIsland/Api/ApiKeyStore.swift` (nuevo, 77 l.):
+  copia verbatim. Llavero servicio `com.jesly.island`, cuenta `jesly-api-key`;
+  fallback `JESLY_API_KEY`; sin clave la API local acepta igual. Clave nunca
+  hardcodeada ni en logs. Nota: el servicio de llavero es solo un nombre de
+  clave y no depende del bundle id del build (hoy `fr.louisraille.NotchBuddy`),
+  así que la clave guardada por la isla actual se lee igual desde el fork.
+- `NotchBuddy/Sources/JeslyIsland/Api/JeslyProposalsPoller.swift` (nuevo, 82 l.):
+  sondeo cada 5 s de `pendingProposals()`; publica `proposals`,
+  `apiReachable`, `lastError`. Solo sondea con la pill activa
+  (`activeIntegrations` contiene `jesly_propuestas`) y respetando
+  `DemoEngine.isPollerPaused`. Cliente nuevo por sondeo (relee la clave
+  del llavero cada vez). Con la API apagada: `apiReachable = false`,
+  `lastError` con el motivo, lista anterior conservada — la pill muestra
+  0 propuestas, sin error que rompa nada.
+
+### 2. `ChatProvider` NO se porta (colisión de nombres, deliberado)
+
+Coucou ya tiene `enum ChatProvider` (`IslandTypes.swift:115`). El struct
+de la isla con ese nombre se porta en la Fase 4 como `JeslyChatProvider`.
+Ningún método de esta sesión lo usa. Verificado por grep.
+
+### 3. Pill registrada
+
+- `PillCatalog.swift`: `jesly_propuestas`, nombre `JESLY`, color `#E8E0D0`
+  (hueso, halo de la nube), categoría `.agent`, subtítulo `"Agent"`
+  (clave existente; no hay `"Proposals"` en `xcstrings`), `source: .agent`
+  (metadato; los datos vienen del sondeo, no de un hook).
+- `AppDelegate.swift` (`setupIsland`, tras `GithubPoller`):
+  `JeslyProposalsPoller.shared.start()`.
+- La pill aparece en Ajustes → Active pills (categoría Agents). OJO: solo
+  caben 4 activas y por defecto ya hay 4 (Resend, n8n, Vercel, GitHub):
+  para activar `jesly_propuestas` hay que desactivar una. Sin tarjeta
+  (sesión 2) la pill no pone ninguna `AgentTask` en la isla.
+- NO tocados: `ApprovalQueue`, `AskQuestion`, `ChatProvider`, voz, ojos,
+  workflows, bundle id, entitlements, `HookServer`, `project.yml`,
+  `project.pbxproj`.
+
+### 4. Verificación sin compilar (hecha)
+
+Balance 0 en los 6 archivos; endpoints idénticos a la isla; sin colisión
+de nombres; `project.yml` sin tocar (el grupo `Sources` ya incluye
+`Sources/JeslyIsland/Api/`). **Sin compilar: solo la Mac lo confirma.**
+
+### 5. Para la sesión 2
+
+Tarjeta Propuesta/Permiso (UI de `ApprovalQueue` + `AskQuestion.swift`,
+backend `proposalAction(taskId:)`); entrada de la clave en Ajustes
+(`ApiKeyStore.save`); acciones por estado según `availableActions`
+(+ "Siempre" como regla revocable). Riesgos: API apagada = pill vacía
+(por diseño); si la Fase 6 cambia el grupo de acceso del llavero,
+revisar `ApiKeyStore`.
