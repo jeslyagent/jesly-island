@@ -256,4 +256,59 @@ public struct JeslyAPIClient: Sendable {
         )
         return (response.task, response.publish)
     }
+
+    // MARK: - Voz y escucha (`routes/voice.ts`, `voice/wake.ts`, Fase 4, sesión 3)
+
+    /// Estado del demonio "Oye JESLY".
+    /// `GET /v1/voice/wake/status` (`routes/voice.ts:57` → `voice/wake.ts`:
+    /// el demonio vive aparte en `services/wake-word/daemon.py` y
+    /// expone su estado en `127.0.0.1:3004/status`, con timeout de
+    /// 2 s). Demonio caído = listening false con 200, nunca 500.
+    /// Porte verbatim del cliente de la isla actual.
+    public func wakeStatus() async throws -> WakeStatus {
+        try await send(request(path: "/v1/voice/wake/status"), as: WakeStatus.self)
+    }
+
+    /// `POST /v1/voice/transcribe` — multipart `file` + `language=es`.
+    /// Devuelve `{ text, language, ... }` (el resto de campos se ignoran).
+    /// Porte verbatim del cliente de la isla actual.
+    public func transcribe(audioData: Data, filename: String, language: String = "es") async throws -> String {
+        struct TranscribeResponse: Decodable {
+            var text: String
+        }
+        let boundary = "jesly-island-\(UUID().uuidString)"
+        var request = request(path: "/v1/voice/transcribe", method: "POST")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"language\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(language)\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n\r\n".data(using: .utf8)!)
+        body.append("Content-Type: audio/wav\r\n\r\n".data(using: .utf8)!)
+        body.append(audioData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+        let response: TranscribeResponse = try await send(request, as: TranscribeResponse.self)
+        return response.text
+    }
+
+    /// `POST /v1/voice/synthesize { text }` → audio WAV.
+    /// Máx. 2000 caracteres (el llamador recorta a 1800).
+    /// Porte verbatim del cliente de la isla actual.
+    public func synthesize(text: String) async throws -> Data {
+        let request = request(path: "/v1/voice/synthesize", method: "POST", jsonBody: ["text": text])
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw ClientError.serverUnreachable
+        }
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            throw ClientError.httpStatus(code, errorMessage(from: data))
+        }
+        return data
+    }
 }

@@ -970,3 +970,114 @@ esté arrancada.") y el motivo queda en `lastError` bajo la entrada.
 - Voz "Oye JESLY" (mapa E: demonio Vosk + `GET
   /v1/voice/wake/status` + modo voz con interrupción) y ojos
   (mapa C: soltar archivo → `POST /v1/chat` con attachments).
+
+## §16. FASE 4, SESIÓN 3 — Voz "Oye JESLY" + ojos (2026-11-27, local, SIN pushear, SIN compilar)
+
+### 16.1 El endpoint de wake SÍ existe (con evidencia)
+
+- `GET /v1/voice/wake/status` existe en el servidor, HEAD
+  `3e2a59db`: `apps/api/src/routes/voice.ts:57` → `getWakeStatus`
+  (`apps/api/src/voice/wake.ts`). El demonio vive aparte
+  (`services/wake-word/daemon.py`, Vosk local) y expone su estado
+  en `127.0.0.1:3004/status`, con timeout de 2 s. Respuesta:
+  `{listening, state: "listening"|"heard"|"thinking"|"speaking"|
+  "stopped"|null, engine: "vosk"|"openwakeword"|null,
+  uptimeSeconds, wakeCount, error}`. Demonio caído = listening
+  false con 200, nunca 500.
+- El demonio hace el ciclo completo DEL LADO DEL SERVIDOR
+  (`services/wake-word/cycle.py`: STT → chat → TTS) cuando oye
+  "Oye JESLY". La app NO graba cuando el demonio oye la frase:
+  eso lo hace el demonio solo. La app solo sondea el estado cada
+  5 s (`JeslyVoiceStore`, igual que `IslandStore.refreshWake` en
+  la isla) y lo muestra. Sin demonio ni API, "Escucha en pausa".
+
+### 16.2 Archivos nuevos/cambiados
+
+- NUEVO `JeslyIsland/Voice/VoiceTalker.swift`: porte verbatim de
+  la isla actual (grabar 16 kHz mono → `POST /v1/voice/transcribe`
+  multipart → `POST /v1/chat` → `POST /v1/voice/synthesize`,
+  recortado a 1800 caracteres → reproducir WAV). `interrupt()`
+  corta la voz y la grabación a la vez. El audio vive solo en
+  memoria y se descarta. Sin sonidos de Mochi: la nube no suena
+  (decisión JC); aquí solo suena la voz sintetizada de JESLY.
+- NUEVO `JeslyIsland/JeslyVoiceStore.swift`: singleton `@MainActor`
+  que sondea `wakeStatus` cada 5 s (`.down` por defecto) y es dueño
+  del `VoiceTalker`. Se arranca en `AppDelegate.setupIsland`.
+- `Api/JeslyAPIClient.swift`: `wakeStatus()`, `transcribe()` y
+  `synthesize()` (porte verbatim del cliente de la isla actual).
+- `CoucouKit/PillCatalog.swift`: pill `jesly_voz` (categoría
+  `.agent`, color hueso `#E8E0D0`, `source: .agent`). Los ojos NO
+  tienen pill: son la zona de soltar archivos del chat, como en
+  la isla actual.
+- `JeslyIsland/JeslyChatStore.swift`: `send(_:attachments:)` y
+  `visionBadge` ("Vio: proveedor / modelo") en el mensaje;
+  `appendVoiceExchange` mete el intercambio de voz en el
+  historial (sin modelo: el talker solo guarda el texto).
+- `JeslyIsland/Views/JeslyChatView.swift`: indicador del demonio
+  (punto hueso + "Oye JESLY" + `WakeStatus.displayText`), botón
+  del micrófono (micrófono / grabando en hueso / ■ para
+  interrumpir / spinner pensando), zona de soltar archivos con
+  borde punteado + fila de adjuntos + avisos, `.onDrop(of:
+  [.image, .movie])` en toda la vista.
+- `App/AppDelegate.swift`: `JeslyVoiceStore.shared.start()` junto
+  al poller de propuestas.
+
+### 16.3 Cómo se activa la voz y cómo se interrumpe
+
+- Siempre activa (demonio): decir "Oye JESLY" en voz alta; el
+  demonio responde solo por el altavoz. La isla solo muestra el
+  estado ("Te escuchó — pensando…", "Hablando…").
+- Manual (micrófono en el chat): tocar el micrófono → graba;
+  tocarlo de nuevo → transcribe, pregunta y habla. Mientras
+  JESLY habla, tocar ■ la interrumpe en mitad de la frase. Si
+  falla, el motivo claro queda en la línea de estado, nunca un
+  error que rompa la interfaz.
+- El permiso de micrófono ya existe en el fork
+  (`project.yml`: `NSMicrophoneUsageDescription` en 3 targets);
+  lo pide macOS al empezar a grabar, igual que el dictado Flow.
+  Sin permisos nuevos.
+
+### 16.4 Cómo se suelta un archivo y qué formato lleva
+
+- Arrastrar una imagen o un video a la vista de chat (o a la
+  zona punteada): se ve en la fila de adjuntos y se manda con el
+  mensaje por `POST /v1/chat` con `attachments: [{kind,
+  mediaType, data(base64)}]`, formato exacto de la isla actual.
+  Límites del servidor, validados antes de enviar: imágenes
+  10 MB, videos 50 MB, máx. 4 adjuntos y 1 video por mensaje.
+  Sin texto, el mensaje es "Mira este adjunto y dime qué ves.".
+  La respuesta muestra "Vio: proveedor / modelo" debajo.
+
+### 16.5 Qué pasa con la API apagada
+
+Nada nuevo y sin errores, mismo comportamiento que las sesiones
+anteriores: el sondeo deja el estado en `.down` ("Escucha en
+pausa"), el micrófono muestra el motivo claro al intentar grabar
+y los adjuntos fallan con el mensaje de error de la isla actual.
+
+### 16.6 Verificación sin compilar (hecha)
+
+- Balance llaves/paréntesis/corchetes 0 (escáner Swift-aware con
+  interpolación) en los archivos nuevos/tocados; la voz usa el
+  endpoint real de la isla (`GET /v1/voice/wake/status`, grep) y
+  los adjuntos el formato real de `POST /v1/chat` (grep).
+- `project.yml` sin tocar en esta sesión. **No afirmo que
+  compile** — solo la Mac lo confirma. Sospechosos si falla:
+  `VoiceTalker` (AVFoundation) o `JeslyChatView` (UTType, drop).
+
+### 16.7 Riesgos y límites conocidos
+
+- El demonio Vosk corre fuera de la app: si no está arrancado
+  (`services/wake-word/`), la escucha siempre activa no existe y
+  la isla solo muestra "Escucha en pausa". La app no arranca el
+  demonio.
+- El intercambio de voz queda en el historial sin modelo (el
+  talker no lo guarda); el chat escrito sí muestra el modelo real.
+- El historial no persiste entre arranques. Sin badge en la pill.
+- Sin workflows ni habilidades (Fase 5).
+
+### 16.8 Para la Fase 5
+
+Workflows, habilidades y recordatorios (mapas B y F); decidir qué
+pills de Coucou quedan (Flow, Mail, música, WhatsApp, demo,
+semanal).

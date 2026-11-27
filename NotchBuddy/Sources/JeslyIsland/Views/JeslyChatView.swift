@@ -1,4 +1,6 @@
+import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Vista de chat de JESLY en la isla (Fase 4, sesión 2).
 ///
@@ -15,15 +17,27 @@ import SwiftUI
 /// FreeLLMAPI → Groq → Gemini → OpenRouter. El modelo no se fija:
 /// lo elige el router por llamada.
 ///
-/// Sin zona para soltar archivos (ojos) ni micrófono (voz): eso
-/// llega en sesiones posteriores de la Fase 4, no aquí.
-///
-/// Sin API no hay chat y no hay errores en la interfaz: antes del
-/// primer envío la vista lo dice claro, y si el envío falla la
-/// respuesta es el mensaje de error de la isla actual.
+/// Voz y ojos (Fase 4, sesión 3), como la isla actual: el indicador
+/// de "Oye JESLY" (punto hueso + texto del demonio, sondeado cada
+/// 5 s por `JeslyVoiceStore`), el micrófono manual (`VoiceTalker`:
+/// grabar → transcribir → chat → hablar, con interrupción) y la
+/// zona para soltar archivos (imágenes 10 MB, videos 50 MB, máx.
+/// 4 adjuntos y 1 video por mensaje) que van por `POST /v1/chat`
+/// como `attachments`. Sin API no hay voz ni ojos y no hay errores
+/// en la interfaz: antes del primer envío la vista lo dice claro,
+/// y si el envío falla la respuesta es el mensaje de error de la
+/// isla actual.
 struct JeslyChatView: View {
     @ObservedObject private var store = JeslyChatStore.shared
+    @ObservedObject private var voice = JeslyVoiceStore.shared
+    // El talker se observa aparte: sus cambios de fase (grabando /
+    // pensando / hablando) no llegan a la vista solo con observar
+    // el store, que solo publica `wakeStatus` y `apiReachable`.
+    @ObservedObject private var talker = JeslyVoiceStore.shared.talker
     @State private var text: String = ""
+    @State private var pendingAttachments: [JeslyDroppedFile] = []
+    @State private var dropNotice: String?
+    @State private var answering: Bool = false
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -52,6 +66,24 @@ struct JeslyChatView: View {
                     }
                     .buttonStyle(.plain)
                     .help("Cambiar de proveedor (el router elige el modelo)")
+                    // Indicador del demonio "Oye JESLY", como la isla
+                    // actual: punto hueso cuando escucha, gris cuando
+                    // no, con el texto del estado (`WakeStatus`).
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(Color(hex: voice.wakeStatus.listening ? "#E8E0D0" : "#6B7079"))
+                            .frame(width: 5, height: 5)
+                        Text("Oye JESLY")
+                            .font(.system(size: 10.5, weight: .semibold))
+                            .foregroundColor(Color(hex: "#7B8089"))
+                        Text(voice.wakeStatus.displayText)
+                            .font(.system(size: 10.5))
+                            .foregroundColor(Color(hex: "#5C6370"))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.white.opacity(0.06))
+                    .clipShape(Capsule())
                     Spacer()
                     if !store.messages.isEmpty {
                         Button("Limpiar") { store.clearHistory() }
@@ -82,6 +114,14 @@ struct JeslyChatView: View {
                                            let model = message.model, !model.isEmpty {
                                             let provider = message.provider ?? ""
                                             Text(provider.isEmpty ? model : "\(provider) · \(model)")
+                                                .font(.system(size: 11))
+                                                .foregroundStyle(Color(hex: "#8E939C"))
+                                        }
+                                        // Insignia de visión, solo cuando
+                                        // la respuesta trae `vision` (ojos).
+                                        if message.role == .jesly,
+                                           let badge = message.visionBadge, !badge.isEmpty {
+                                            Text(badge)
                                                 .font(.system(size: 11))
                                                 .foregroundStyle(Color(hex: "#8E939C"))
                                         }
@@ -131,6 +171,29 @@ struct JeslyChatView: View {
                     Spacer()
                 }
 
+                // Zona para soltar archivos (ojos), como la isla
+                // actual: imágenes y videos que JESLY describe.
+                dropZone
+
+                if !pendingAttachments.isEmpty {
+                    attachmentRow
+                }
+
+                if let notice = dropNotice {
+                    Text(notice)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Color(hex: "#F5A524"))
+                        .padding(.horizontal, 10)
+                }
+
+                // Estado del modo voz manual, cuando está activo.
+                if talker.phase != .idle {
+                    Text(voiceStatusText)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Color(hex: "#8E939C"))
+                        .padding(.horizontal, 10)
+                }
+
                 // Fila de entrada, como `PromptView`.
                 HStack(spacing: 8) {
                     TextField(store.messages.isEmpty ? "Pregúntale algo a JESLY…" : "Continúa…", text: $text)
@@ -140,13 +203,15 @@ struct JeslyChatView: View {
                         .writingToolsBehavior(.disabled)
                         .onSubmit { sendMessage() }
 
+                    micButton
+
                     Button(action: sendMessage) {
                         Image(systemName: "arrow.up")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(Color(hex: "#0B0C0E"))
                     }
                     .buttonStyle(SendButtonStyle())
-                    .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.sending)
+                    .disabled((text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && pendingAttachments.isEmpty) || store.sending)
                 }
                 .padding(.horizontal, 10).padding(.vertical, 6)
                 .background(Color.white.opacity(0.07))
@@ -167,12 +232,183 @@ struct JeslyChatView: View {
         }
         .padding(.bottom, 10)
         .onAppear { focused = true }
+        .onDrop(of: [.image, .movie], isTargeted: nil) { providers in
+            handleDrop(providers: providers)
+        }
     }
 
     private func sendMessage() {
         let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty, !store.sending else { return }
+        guard !query.isEmpty || !pendingAttachments.isEmpty, !store.sending else { return }
         text = ""
-        Task { await store.send(query) }
+        let attachments = pendingAttachments.map { file in
+            ChatAttachment(kind: file.kind, mediaType: file.mediaType, data: file.data.base64EncodedString())
+        }
+        pendingAttachments = []
+        dropNotice = nil
+        Task { await store.send(query, attachments: attachments) }
     }
+
+    // MARK: - Ojos (soltar archivo)
+
+    /// Zona para soltar archivos, como la isla actual: borde
+    /// punteado y texto claro. Acepta imágenes y videos
+    /// (`.onDrop(of: [.image, .movie])` en toda la vista).
+    private var dropZone: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "tray.and.arrow.up")
+                .font(.system(size: 13))
+            Text("Suelta un archivo aquí y JESLY te pregunta qué quieres hacer con él.")
+                .font(.system(size: 11.5))
+        }
+        .foregroundStyle(Color(hex: "#8E939C"))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(8)
+        .padding(.horizontal, 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(Color.white.opacity(0.25), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+        )
+        .padding(.horizontal, 10)
+    }
+
+    private var attachmentRow: some View {
+        HStack(spacing: 6) {
+            ForEach(pendingAttachments) { file in
+                Label(file.name, systemImage: file.kind == "video" ? "film" : "photo")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color(hex: "#F5F6F8"))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.white.opacity(0.06))
+                    .clipShape(Capsule())
+            }
+            Spacer()
+            Button("Quitar") { pendingAttachments = [] }
+                .font(.system(size: 12))
+                .foregroundStyle(Color(hex: "#8E939C"))
+        }
+        .padding(.horizontal, 10)
+    }
+
+    private func handleDrop(providers: [NSItemProvider]) -> Bool {
+        var accepted = false
+        for provider in providers {
+            if pendingAttachments.count >= 4 { break }
+            if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
+                load(provider: provider, kind: "video")
+                accepted = true
+            } else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+                load(provider: provider, kind: "image")
+                accepted = true
+            }
+        }
+        return accepted
+    }
+
+    private func load(provider: NSItemProvider, kind: String) {
+        let type = kind == "video" ? UTType.movie : UTType.image
+        // El nombre se lee aquí, antes del cierre asíncrono: NSItemProvider
+        // no es Sendable y no puede cruzarse a la tarea del actor principal.
+        let suggestedName = provider.suggestedName
+        provider.loadDataRepresentation(forTypeIdentifier: type.identifier) { data, error in
+            guard let data, error == nil else { return }
+            Task { @MainActor in
+                // Límites del servidor, validados antes de enviar.
+                let maxBytes = kind == "video" ? 50 * 1024 * 1024 : 10 * 1024 * 1024
+                if data.count > maxBytes {
+                    dropNotice = "Ese \(kind == "video" ? "video" : "imagen") pasa el límite (\(kind == "video" ? "50 MB" : "10 MB"))."
+                    return
+                }
+                if kind == "video", pendingAttachments.contains(where: { $0.kind == "video" }) {
+                    dropNotice = "Solo un video por mensaje."
+                    return
+                }
+                let mediaType = kind == "video" ? "video/mp4" : "image/png"
+                pendingAttachments.append(JeslyDroppedFile(
+                    name: suggestedName ?? (kind == "video" ? "video" : "imagen"),
+                    kind: kind,
+                    mediaType: mediaType,
+                    data: data
+                ))
+                dropNotice = nil
+            }
+        }
+    }
+
+    // MARK: - Voz (micrófono manual)
+
+    private var micIsRecording: Bool {
+        if case .recording = talker.phase { return true }
+        return false
+    }
+
+    /// Texto del estado del modo voz, en español y sin jerga.
+    private var voiceStatusText: String {
+        switch talker.phase {
+        case .recording: return "Escuchando… toca el micrófono para terminar."
+        case .thinking: return "Pensando…"
+        case .speaking: return "Hablando… toca ■ para interrumpir."
+        case .error(let message): return message
+        case .idle: return ""
+        }
+    }
+
+    /// Botón del micrófono, como la isla actual: micrófono en
+    /// reposo, grabando en hueso, ■ mientras habla (interrumpe),
+    /// spinner mientras piensa. Sin API, el error llega claro por
+    /// `VoiceTalker.phase == .error`.
+    private var micButton: some View {
+        Button(action: micTapped) {
+            Group {
+                switch talker.phase {
+                case .thinking:
+                    ProgressView().controlSize(.small)
+                case .speaking:
+                    Image(systemName: "stop.fill").font(.system(size: 13))
+                default:
+                    Image(systemName: "mic.fill").font(.system(size: 14))
+                }
+            }
+            .foregroundStyle(micIsRecording ? Color(hex: "#0B0C0E") : Color(hex: "#F5F6F8"))
+            .frame(width: 32, height: 32)
+            .background(micIsRecording ? Color(hex: "#E8E0D0") : Color.white.opacity(0.07))
+            .clipShape(Circle())
+            .overlay(Circle().stroke(micIsRecording ? Color(hex: "#E8E0D0") : Color.white.opacity(0.22), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(answering || talker.phase == .thinking)
+        .help("Dictar por voz")
+    }
+
+    private func micTapped() {
+        switch talker.phase {
+        case .idle, .error:
+            voice.prepareTalker()
+            talker.startListening()
+        case .recording:
+            answering = true
+            Task {
+                await talker.stopListeningAndAnswer()
+                answering = false
+                // El intercambio de voz queda en el historial del
+                // chat, como un mensaje normal (sin modelo: el
+                // talker solo guarda el texto de la respuesta).
+                store.appendVoiceExchange(heard: talker.lastHeard, reply: talker.lastReply)
+            }
+        case .thinking:
+            break
+        case .speaking:
+            talker.interrupt()
+        }
+    }
+}
+
+/// Archivo soltado en el chat, listo para enviar como adjunto.
+struct JeslyDroppedFile: Identifiable, Equatable {
+    var id = UUID()
+    var name: String
+    var kind: String  // "image" | "video"
+    var mediaType: String
+    var data: Data
 }

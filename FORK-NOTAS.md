@@ -702,3 +702,57 @@ confirma.** Sospechosos: `JeslyChatView` o el switch nuevo en
 Voz "Oye JESLY" (mapa E) y ojos (mapa C: soltar archivo →
 `POST /v1/chat` con attachments). Riesgos: el historial no
 persiste entre arranques; sin badge en la pill.
+
+## FASE 4, SESIÓN 3 — Voz "Oye JESLY" + ojos (2026-11-27, local, SIN pushear, SIN compilar)
+
+### 1. El endpoint de wake SÍ existe (con evidencia)
+
+`GET /v1/voice/wake/status` en el servidor, HEAD `3e2a59db`:
+`apps/api/src/routes/voice.ts:57` → `getWakeStatus`
+(`apps/api/src/voice/wake.ts`). Demonio Vosk aparte
+(`services/wake-word/daemon.py`) en `127.0.0.1:3004/status`,
+timeout 2 s. Respuesta: `{listening, state, engine, uptimeSeconds,
+wakeCount, error}`; caído = listening false con 200, nunca 500.
+El demonio hace el ciclo STT → chat → TTS del lado del servidor
+(`services/wake-word/cycle.py`) cuando oye "Oye JESLY": la app NO
+graba cuando el demonio oye la frase, solo sondea el estado cada
+5 s y lo muestra.
+
+### 2. Archivos nuevos/cambiados
+
+- NUEVO `JeslyIsland/Voice/VoiceTalker.swift`: porte verbatim de
+  la isla (grabar 16 kHz mono → transcribe → chat → synthesize,
+  recortado a 1800 → reproducir WAV). `interrupt()` corta voz y
+  grabación. Audio solo en memoria. Sin sonidos de Mochi.
+- NUEVO `JeslyIsland/JeslyVoiceStore.swift`: sondea `wakeStatus`
+  cada 5 s (`.down` por defecto), dueño del talker. Arranque en
+  `AppDelegate.setupIsland`.
+- `Api/JeslyAPIClient.swift`: `wakeStatus()`, `transcribe()`,
+  `synthesize()` (verbatim de la isla).
+- `CoucouKit/PillCatalog.swift`: pill `jesly_voz` (`.agent`,
+  hueso). Los ojos NO tienen pill: son la zona de soltar del chat.
+- `JeslyIsland/JeslyChatStore.swift`: `send(_:attachments:)`,
+  `visionBadge` ("Vio: proveedor / modelo"),
+  `appendVoiceExchange` (historial de voz sin modelo).
+- `JeslyIsland/Views/JeslyChatView.swift`: indicador del demonio,
+  micrófono (grabar / ■ interrumpir / spinner), zona de soltar
+  con borde punteado + fila de adjuntos, `.onDrop([.image,
+  .movie])`. Límites: imágenes 10 MB, videos 50 MB, máx. 4
+  adjuntos y 1 video; formato `attachments: [{kind, mediaType,
+  data(base64)}]`, exacto de la isla.
+- Permiso de micrófono: ya existe en `project.yml` (3 targets).
+  Sin permisos nuevos.
+
+### 3. Verificación sin compilar (hecha)
+
+Balance 0 en los archivos nuevos/tocados (escáner Swift-aware);
+la voz usa el endpoint real de la isla (grep) y los adjuntos el
+formato real de `POST /v1/chat` (grep). `project.yml` sin tocar.
+**Sin compilar: solo la Mac lo confirma.** Sospechosos:
+`VoiceTalker` (AVFoundation) o `JeslyChatView` (UTType, drop).
+
+### 4. Para la Fase 5
+
+Workflows, habilidades y recordatorios (mapas B y F); decidir qué
+pills de Coucou quedan. Riesgos: el demonio no lo arranca la app;
+el intercambio de voz queda sin modelo en el historial.

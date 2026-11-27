@@ -16,17 +16,21 @@ public struct JeslyChatMessage: Identifiable, Equatable {
     public var provider: String?
     /// Modelo real que respondió (`ChatResponse.model`).
     public var model: String?
+    /// Insignia de visión ("Vio: proveedor / modelo"), solo cuando
+    /// la respuesta trae `vision` (ojos, Fase 4, sesión 3).
+    public var visionBadge: String?
 
     public enum Role: String, Equatable {
         case user
         case jesly
     }
 
-    public init(role: Role, text: String, provider: String? = nil, model: String? = nil) {
+    public init(role: Role, text: String, provider: String? = nil, model: String? = nil, visionBadge: String? = nil) {
         self.role = role
         self.text = text
         self.provider = provider
         self.model = model
+        self.visionBadge = visionBadge
     }
 }
 
@@ -43,8 +47,9 @@ public struct JeslyChatMessage: Identifiable, Equatable {
 /// lo muestra como mensaje de JESLY, igual que la isla actual —
 /// nunca un error que rompa la interfaz.
 ///
-/// Sin zona para soltar archivos (ojos) ni micrófono (voz): eso
-/// llega en sesiones posteriores de la Fase 4, no aquí.
+/// Los ojos (Fase 4, sesión 3) llegan por `send(_:attachments:)`
+/// y el micrófono vive en `JeslyVoiceStore` / `VoiceTalker`; la
+/// vista los cablea sin tocar este flujo.
 @MainActor
 final class JeslyChatStore: ObservableObject {
     static let shared = JeslyChatStore()
@@ -91,20 +96,28 @@ final class JeslyChatStore: ObservableObject {
     /// Envía un mensaje y añade la respuesta. Sin API, la respuesta
     /// es el mensaje de error claro de la isla actual, no una
     /// excepción en la interfaz.
-    func send(_ text: String) async {
+    ///
+    /// `attachments` son los ojos (Fase 4, sesión 3): imágenes o
+    /// video en base64 que van por `POST /v1/chat` con el mismo
+    /// formato exacto de la isla actual (`ChatAttachment`: kind,
+    /// mediaType, data). La respuesta puede traer `vision` y la
+    /// fila muestra la insignia "Vio: proveedor / modelo".
+    func send(_ text: String, attachments: [ChatAttachment] = []) async {
         let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !sending, !query.isEmpty else { return }
+        guard !sending, !query.isEmpty || !attachments.isEmpty else { return }
         sending = true
         defer { sending = false }
-        messages.append(JeslyChatMessage(role: .user, text: query))
+        messages.append(JeslyChatMessage(role: .user, text: query.isEmpty ? "Mira este adjunto y dime qué ves." : query))
         do {
             let client = JeslyAPIClient()
-            let response = try await client.chat(message: query, provider: selectedProvider)
+            let response = try await client.chat(message: query, provider: selectedProvider, attachments: attachments)
             apiReachable = true
             lastError = nil
+            let badge = response.vision.map { "Vio: \($0.provider) / \($0.model)" }
             messages.append(JeslyChatMessage(
                 role: .jesly, text: response.text,
-                provider: response.provider, model: response.model
+                provider: response.provider, model: response.model,
+                visionBadge: badge
             ))
         } catch {
             apiReachable = false
@@ -114,6 +127,16 @@ final class JeslyChatStore: ObservableObject {
                 text: "No pude hablar con la API. Revisa que esté arrancada."
             ))
         }
+    }
+
+    /// Añade al historial un intercambio de voz ya completado por
+    /// `VoiceTalker` (que hace su propio ciclo grabar → chat →
+    /// hablar). El modelo no se muestra: el talker solo guarda el
+    /// texto de la respuesta, nunca un modelo inventado.
+    func appendVoiceExchange(heard: String, reply: String) {
+        guard !heard.isEmpty, !reply.isEmpty else { return }
+        messages.append(JeslyChatMessage(role: .user, text: heard))
+        messages.append(JeslyChatMessage(role: .jesly, text: reply, provider: selectedProvider))
     }
 
     /// Limpia el historial de esta sesión.

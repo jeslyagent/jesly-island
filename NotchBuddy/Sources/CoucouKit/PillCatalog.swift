@@ -104,6 +104,16 @@ enum PillCatalog {
         // activar una pill a la vez: el máximo es 4 y por defecto ya hay 4).
         .init(id: "jesly_propuestas", name: "JESLY", color: "#E8E0D0",
               category: .agent,     subtitle: String(localized: "Agent"),        source: .agent),
+        // ── JESLY voz (Fase 4, sesión 3) ─────────────────────────────────────
+        // La voz "Oye JESLY" no es un spotter propio: el demonio Vosk
+        // local (`services/wake-word/daemon.py`) escucha por su cuenta
+        // y hace el ciclo STT → chat → TTS del lado del servidor; la
+        // app solo sondea su estado (`GET /v1/voice/wake/status`,
+        // `JeslyVoiceStore`) y ofrece el micrófono manual
+        // (`VoiceTalker`). La pill solo registra la voz en Ajustes →
+        // Active pills; sin demonio ni API, muestra "Escucha en pausa".
+        .init(id: "jesly_voz",           name: "JESLY Voz",   color: "#E8E0D0",
+              category: .agent,     subtitle: String(localized: "Agent"),        source: .agent),
         // ── AI for the chat ──────────────────────────────────────────────────
         .init(id: "ai_anthropic",        name: "Anthropic",   color: ChatProvider.anthropic.accentHex,
               category: .ai,        subtitle: String(localized: "Chat"),         source: .n8n),
