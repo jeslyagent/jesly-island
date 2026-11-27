@@ -2542,7 +2542,13 @@ struct SettingsView: View {
             if def.id == SpotifyController.pillId && !SpotifyController.shared.isInstalled { return String(localized: "Not installed") }
             #endif
             if def.category == .ai {
-                if let provider = ChatProvider(pillID: def.id), provider.isLocal {
+                // JESLY Chat no pide clave: la API local acepta sin
+                // Bearer (la del llavero solo se manda si existe).
+                // Sin esta guarda, el `else` pediría la clave de
+                // OpenAI para `jesly_chat` (`pillID:` es nil).
+                if def.id == "jesly_chat" {
+                    // Sin hint: nada que configurar.
+                } else if let provider = ChatProvider(pillID: def.id), provider.isLocal {
                     let url = provider == .ollama ? state.ollamaServerURL : state.lmstudioServerURL
                     if url.isEmpty { return String(localized: "Not connected") }
                 } else {

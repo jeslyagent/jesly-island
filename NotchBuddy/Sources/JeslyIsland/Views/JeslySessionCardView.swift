@@ -25,6 +25,11 @@ import SwiftUI
 ///     Descartar / Revertir), los mismos de la tarjeta de la sesión 2:
 ///     la tarjeta de Propuesta/Permiso solo se abre ya para lo que
 ///     espera permiso; lo planificado/aplicado vive aquí.
+///   Fase 4, sesión 1: si la tarea está en `aplicada`, dos botones
+///     más — Verificar (`POST /v1/tasks/:id/verify`, contra el
+///     sistema VIVO) y Publicar (`POST /v1/tasks/:id/publish`,
+///     push + deploy si toca `cloud/`). En cualquier otro estado el
+///     servidor responde 409, así que no se muestran.
 ///
 /// Con la API apagada no aparece la tarjeta (el poller no trae nada
 /// nuevo y la pill muestra 0 propuestas, sesiones 1–2).
@@ -128,6 +133,25 @@ struct JeslySessionView: View {
                     }
                     .padding(.top, 4)
                     .disabled(working)
+                    // Verificación y publicación (Fase 4, sesión 1):
+                    // solo tareas en `aplicada` — el servidor responde
+                    // 409 en cualquier otro estado. Verificar corre el
+                    // verificador contra el sistema VIVO con las
+                    // comprobaciones locales por defecto; Publicar hace
+                    // push + deploy si toca `cloud/` + verificación
+                    // contra lo desplegado. Nunca fusionan a main.
+                    if task.status == "aplicada" {
+                        HStack(spacing: 8) {
+                            PrimaryButton(verbatim: "Verificar") {
+                                Task { await runVerify(shownId: shownId) }
+                            }
+                            SecondaryButton(verbatim: "Publicar") {
+                                Task { await runPublish(shownId: shownId) }
+                            }
+                        }
+                        .padding(.top, 4)
+                        .disabled(working)
+                    }
                 }
                 if let feedback, feedbackForId == shownId {
                     Text(feedback)
@@ -190,6 +214,41 @@ struct JeslySessionView: View {
         if store.lastError == nil {
             feedback = feedbackFor(action)
             feedbackIsError = false
+        } else {
+            feedback = store.lastError
+            feedbackIsError = true
+        }
+        feedbackForId = shownId
+    }
+
+    /// Verificar la tarea aplicada en curso (Fase 4, sesión 1).
+    /// Un veredicto con fallos es 200, no excepción: la tarjeta
+    /// muestra el resumen ("en verde (2/2)" o "1 fallo: health").
+    private func runVerify(shownId: String?) async {
+        guard let task = sessionTask, task.id == shownId else { return }
+        working = true
+        defer { working = false }
+        await store.verify(task: task)
+        if let report = store.lastVerification, store.lastError == nil {
+            feedback = "Verificación: \(report.summary)"
+            feedbackIsError = !report.passed
+        } else {
+            feedback = store.lastError
+            feedbackIsError = true
+        }
+        feedbackForId = shownId
+    }
+
+    /// Publicar la tarea aplicada en curso (Fase 4, sesión 1).
+    /// "Publicada" / "Parcial: falló en deploy" / "Fallida: …".
+    private func runPublish(shownId: String?) async {
+        guard let task = sessionTask, task.id == shownId else { return }
+        working = true
+        defer { working = false }
+        await store.publish(task: task)
+        if let record = store.lastPublish, store.lastError == nil {
+            feedback = record.summary
+            feedbackIsError = record.status == "fallida"
         } else {
             feedback = store.lastError
             feedbackIsError = true

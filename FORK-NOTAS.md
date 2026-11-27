@@ -593,3 +593,59 @@ Verificación/publicación en la tarjeta (`POST /v1/tasks/:id/verify`,
 JESLY"; ojos. Riesgos: la tarjeta no roba otras vistas; pasos
 derivados de las listas (una tarea recién decidida puede verse un
 instante en curso); sin badge en la pill.
+
+## FASE 4, SESIÓN 1 — Verificar/Publicar + chat (proveedor y pill)
+
+### 1. Archivos nuevos/cambiados
+
+- `JeslyIsland/Api/JeslyAPIClient.swift`: `chat()` (porte verbatim
+  de la isla) + `verify(taskId:)` y `publish(taskId:)` nuevos.
+- `JeslyIsland/Api/JeslyModels.swift`: `JeslyChatProvider` (porte
+  verbatim del struct de la isla, renombrado) +
+  `JeslyVerificationReport` / `JeslyVerificationCheck` /
+  `JeslyPublishRecord`.
+- `JeslyIsland/JeslyProposalStore.swift`: `verify(task:)` y
+  `publish(task:)` + `lastVerification` / `lastPublish`.
+- `JeslyIsland/Views/JeslySessionCardView.swift`: botones Verificar
+  y Publicar solo si la tarea está en `aplicada`, con feedback del
+  resumen.
+- `CoucouKit/PillCatalog.swift`: pill `jesly_chat` (`.ai`, hueso).
+- `App/SettingsView.swift`: guarda en el hint — JESLY no pide clave
+  (sin ella pediría la de OpenAI).
+- Docs: `README-FASE2.md` §14.
+
+### 2. Verificación/publicación: evidencia
+
+- NO los usa el cliente de la isla, pero SÍ existen en el servidor
+  del mismo repo, HEAD `3e2a59db`: `apps/api/src/routes/tasks.ts:779`
+  (`verify`) y `:868` (`publish`); plan v2 §8/§9. Solo `aplicada`
+  (409 si no). `verify` exige `checks` no vacío (400 si falta): se
+  mandan los defaults locales del servidor (health 3000 + 3003).
+  `publish` sin cuerpo usa los defaults del servidor (detecta
+  `cloud/`). Veredicto con fallos = 200, no excepción. Nunca se
+  fusiona a main.
+
+### 3. El chat en esta sesión
+
+- Transporte + proveedor + pill: `JeslyAPIClient.chat`,
+  `JeslyChatProvider.all` (5 proveedores), pill `jesly_chat` en
+  Ajustes → Active pills → "AI for the chat". Sin modelo fijo: el
+  router elige. Sin API no hay chat y no hay errores. La vista de
+  chat con selector e historial es la sesión 2.
+
+### 4. Verificación sin compilar (hecha)
+
+Balance 0 en los 6 archivos (scanner con interpolación anidada);
+`verify`/`publish` con task id exacto (grep); un solo enum
+`ChatProvider` + un solo struct `JeslyChatProvider` (grep); pill en
+el catálogo (grep); sin hook en el camino de JESLY (solo
+comentarios). `project.yml` sin tocar. **Sin compilar: solo la Mac
+lo confirma.**
+
+### 5. Para la Fase 4, sesión 2
+
+Vista de chat JESLY (selector de proveedor, historial, modelo
+real); voz "Oye JESLY" y ojos después. Riesgos: `verify` con checks
+locales no dice nada de lo desplegado si la tarea toca `cloud/` —
+ahí el botón correcto es Publicar; la pill `jesly_chat` aún no abre
+vista; sin badge en la pill.

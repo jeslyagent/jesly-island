@@ -53,6 +53,11 @@ final class JeslyProposalStore: ObservableObject {
     @Published private(set) var totalCount: Int = 0
     /// Motivo del último fallo al actuar, nil cuando fue bien.
     @Published private(set) var lastError: String?
+    /// Último informe de verificación (Fase 4, sesión 1), nil si
+    /// aún no se verificó nada en esta ronda.
+    @Published private(set) var lastVerification: JeslyVerificationReport?
+    /// Último resultado de publicación (Fase 4, sesión 1).
+    @Published private(set) var lastPublish: JeslyPublishRecord?
 
     /// Reglas "Siempre", guardadas en UserDefaults (solo agente+tipo).
     @Published var alwaysRules: [AlwaysRule] = [] {
@@ -175,11 +180,43 @@ final class JeslyProposalStore: ObservableObject {
         }
     }
 
+    // MARK: - Verificación y publicación (Fase 4, sesión 1)
+
+    /// Verificar una tarea `aplicada` contra el sistema VIVO.
+    /// `POST /v1/tasks/:id/verify`. Solo `aplicada` (409 si no).
+    /// Un veredicto con fallos responde 200: no es excepción, queda
+    /// en `lastVerification` y la tarjeta muestra qué falló.
+    func verify(task: JeslyTask) async {
+        do {
+            let client = JeslyAPIClient()
+            let (_, report) = try await client.verify(taskId: task.id)
+            lastVerification = report
+            lastError = nil
+            JeslyProposalsPoller.shared.refreshNow()
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    /// Publicar una tarea `aplicada`: push + deploy si toca `cloud/`
+    /// + verificación contra lo desplegado. `POST /v1/tasks/:id/publish`.
+    /// Solo `aplicada` (409 si no). Nunca fusiona a main.
+    func publish(task: JeslyTask) async {
+        do {
+            let client = JeslyAPIClient()
+            let (_, record) = try await client.publish(taskId: task.id)
+            lastPublish = record
+            lastError = nil
+            JeslyProposalsPoller.shared.refreshNow()
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
     /// Permitir / Denegar / Siempre sobre una propuesta en espera.
     /// "Siempre" crea la regla Y aprueba ESTA propuesta; la regla
     /// solo se aplica a propuestas futuras del mismo agente y tipo.
-    func answerPermission(_ answer: PermissionAnswer, for task: JeslyTask) async {
-        switch answer {
+    func answerPermission(_ answer: PermissionAnswer, for task: JeslyTask) async {        switch answer {
         case .allow:
             await act(.approve, on: task)
         case .deny:

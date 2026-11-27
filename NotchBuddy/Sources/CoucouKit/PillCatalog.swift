@@ -115,6 +115,18 @@ enum PillCatalog {
               category: .ai,        subtitle: String(localized: "Chat"),         source: .n8n),
         .init(id: "ai_lmstudio",         name: "LM Studio",   color: ChatProvider.lmstudio.accentHex,
               category: .ai,        subtitle: String(localized: "Chat"),         source: .n8n),
+        // ── JESLY chat (Fase 4, sesión 1) ────────────────────────────────────
+        // El chat de JESLY no habla con Anthropic/OpenAI directo: va
+        // por la API local (`POST /v1/chat`, `JeslyAPIClient.chat`),
+        // con la misma clave del llavero que las propuestas y sin
+        // fijar modelo — el router elige y la respuesta trae el
+        // modelo real. La vista de chat con el selector de proveedor
+        // (`JeslyChatProvider`) llega en la Fase 4, sesión 2; esta
+        // pill solo registra el chat en Ajustes → Active pills.
+        // `source: .agent` (no `.n8n` como las demás de chat): los
+        // datos vienen de la API local, no de n8n.
+        .init(id: "jesly_chat",          name: "JESLY Chat",  color: "#E8E0D0",
+              category: .ai,        subtitle: String(localized: "Chat"),         source: .agent),
         // ── Services ─────────────────────────────────────────────────────────
         .init(id: "integration_resend",  name: "Resend",      color: "#22C55E",
               category: .service,   subtitle: String(localized: "Integration"),  source: .n8n),

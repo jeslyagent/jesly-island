@@ -793,3 +793,92 @@ diff, esa parte no se muestra.
 - Pill `jesly_chat` + proveedor `JeslyChatProvider` (mapa D);
   `ChatProvider` de Coucou sigue sin tocarse.
 - Voz "Oye JESLY" (mapa E) y ojos (mapa C).
+
+## §14. FASE 4, SESIÓN 1 — Verificar/Publicar + chat (proveedor y pill)
+
+### 14.1 Qué se hizo
+
+- `JeslyAPIClient`: `chat(message:provider:attachments:)` (porte
+  verbatim de la isla, `POST /v1/chat`) + `verify(taskId:)` y
+  `publish(taskId:)` nuevos.
+- `JeslyModels`: `JeslyChatProvider` (porte verbatim del struct
+  `ChatProvider` de la isla, renombrado — el enum de Coucou ya usa
+  ese nombre) + `JeslyVerificationReport` /
+  `JeslyVerificationCheck` / `JeslyPublishRecord`.
+- `JeslyProposalStore`: `verify(task:)` y `publish(task:)`, con
+  `lastVerification` / `lastPublish` publicados para la tarjeta.
+- `JeslySessionView`: botones **Verificar** y **Publicar** solo
+  cuando la tarea está en `aplicada`; el feedback muestra el
+  resumen del informe o del registro.
+- `PillCatalog`: pill `jesly_chat` (categoría `.ai`, color hueso
+  `#E8E0D0`, `source: .agent`). `SettingsView` (hint de la fila):
+  JESLY no pide clave — sin esa guarda pediría la de OpenAI.
+
+### 14.2 Verificación/publicación: evidencia, no invento
+
+- Los endpoints NO los usa el cliente de la isla actual, pero
+  EXISTEN en el servidor del mismo repo, HEAD `3e2a59db`:
+  `apps/api/src/routes/tasks.ts:779` (`POST /v1/tasks/:id/verify`)
+  y `:868` (`POST /v1/tasks/:id/publish`); plan v2 §8/§9.
+- Solo tareas en `aplicada` y kind `propuesta` (409 si no).
+  `verify` exige `checks` no vacío (400 si falta): se mandan las
+  comprobaciones locales por defecto del propio servidor
+  (`publish.ts: defaultChecks`, caso sin cloud: health a
+  `127.0.0.1:3000/health` y a `127.0.0.1:3003`). `publish` sin
+  cuerpo usa los defaults del servidor, que detectan si el cambio
+  toca `cloud/` y verifican contra lo desplegado.
+- Un veredicto con fallos es 200, no excepción: `passed` false y
+  la tarjeta muestra qué falló. `publish.status` es `publicada` /
+  `parcial` / `fallida`, con `failedAt` (`push`/`deploy`/`verify`)
+  y `error`. Nunca se fusiona a main.
+
+### 14.3 El chat en esta sesión
+
+- Transporte listo: `JeslyAPIClient.chat` + `JeslyChatProvider.all`
+  (ollama-local, freellmapi, groq, gemini, openrouter) + pill
+  `jesly_chat` en Ajustes → Active pills → "AI for the chat".
+  Sin modelo fijo: el router elige y la respuesta trae el modelo
+  real (`ChatResponse.model`), igual que la isla.
+- Sin API no hay chat y no hay errores: el cliente lanza
+  `serverUnreachable` y la vista de chat (sesión 2) lo muestra
+  como "API local sin responder", igual que las tarjetas.
+- La vista de chat con el selector de proveedor y el historial
+  llega en la Fase 4, sesión 2. Esta sesión es el cimiento:
+  proveedor + transporte + pill.
+
+### 14.4 Verificación sin compilar (hecha)
+
+- Balance llaves/paréntesis/corchetes **0** (scanner Swift-aware
+  con interpolación anidada; la primera pasada dio falsos
+  positivos por ternarios con strings dentro de `\(...)`, y la
+  segunda con pila de estados los dejó en 0) en los 6 archivos
+  nuevos/tocados.
+- `verify`/`publish` usan el `task id` exacto (grep); un solo
+  `enum ChatProvider` (Coucou) + un solo `struct
+  JeslyChatProvider` (grep); pill `jesly_chat` en el catálogo
+  (grep); sin hook en el camino de JESLY (solo comentarios).
+- `project.yml` sin tocar en esta sesión.
+- **No afirmo que compile** — solo la Mac lo confirma.
+  Sospechosos si falla: los modelos nuevos con valores por defecto
+  en `JeslyModels`, o los botones nuevos en `JeslySessionView`.
+
+### 14.5 Riesgos y límites conocidos
+
+- `verify` manda las comprobaciones locales por defecto: si la
+  tarea toca `cloud/`, el botón correcto es Publicar (el servidor
+  calcula solo las comprobaciones desplegadas). Verificar una
+  tarea de cloud con checks locales puede dar verde en local y no
+  decir nada de lo desplegado.
+- La pill `jesly_chat` aún no abre ninguna vista de chat: eso es
+  la sesión 2. Activarla solo la registra.
+- Con la API apagada, Verificar/Publicar fallan con el mensaje
+  "La API de JESLY no responde…", igual que el resto de acciones.
+- Sin badge en la pill (sigue sin haber `AgentTask` de JESLY en
+  `state.tasks`).
+
+### 14.6 Para la Fase 4, sesión 2
+
+- Vista de chat JESLY en la isla: selector de proveedor
+  (`JeslyChatProvider.all`), historial, modelo real de la
+  respuesta, entrada de texto; sin API, "API local sin responder".
+- Voz "Oye JESLY" (mapa E) y ojos (mapa C) quedan para después.

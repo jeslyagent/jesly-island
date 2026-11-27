@@ -10,11 +10,12 @@ import Foundation
 /// HEAD `3e2a59db`. Porte de la Fase 3, sesión 1.
 ///
 /// UNA diferencia con el origen, deliberada: el `ChatProvider` struct
-/// de la isla NO se porta aquí. Coucou ya tiene un `enum ChatProvider`
-/// (`CoucouKit/IslandTypes.swift:115`) y dos tipos con el mismo nombre
-/// en el mismo módulo no compilan. En la Fase 4, cuando llegue el
-/// proveedor de chat JESLY, se porta como `JeslyChatProvider`.
-/// Ningún método del cliente de esta sesión lo usa.
+/// de la isla NO se porta con ese nombre. Coucou ya tiene un
+/// `enum ChatProvider` (`CoucouKit/IslandTypes.swift:115`) y dos tipos
+/// con el mismo nombre en el mismo módulo no compilan. En la Fase 4,
+/// sesión 1, se porta como `JeslyChatProvider` (abajo en este
+/// archivo). Ningún método del cliente de la sesión 1 lo usaba; el
+/// `chat()` del cliente llega en la Fase 4, sesión 1.
 
 /// Una tarea/propuesta del ledger (`GET /v1/tasks`, `routes/tasks.ts`).
 /// Columnas: id, title, status, plan, result, agent_id, kind,
@@ -99,9 +100,9 @@ public enum ProposalAction: String, CaseIterable, Equatable, Sendable {
 }
 
 /// Respuesta de `POST /v1/chat` (`routes/chat.ts`).
-/// (Sin uso en esta sesión; el chat llega en la Fase 4.)
-public struct ChatResponse: Codable, Equatable {
-    public var text: String
+/// La usa `JeslyAPIClient.chat` desde la Fase 4, sesión 1 (la vista
+/// de chat con el selector de proveedor llega en la sesión 2).
+public struct ChatResponse: Codable, Equatable {    public var text: String
     public var provider: String
     public var model: String
     public var latencyMs: Int?
@@ -192,5 +193,142 @@ public struct WakeStatus: Codable, Equatable, Sendable {
             }
         }
         return "Escucha en pausa"
+    }
+}
+
+// MARK: - Chat: proveedor JESLY (Fase 4, sesión 1)
+
+/// Proveedor del router (`router/providers.ts`). El chat acepta
+/// `provider`, NO `model`: el modelo lo elige el router por llamada
+/// y vuelve en la respuesta (`ChatResponse.model`). La isla muestra
+/// el modelo real de la última respuesta, nunca uno inventado.
+///
+/// Porte verbatim del `ChatProvider` struct de la isla actual
+/// (`JeslyModels.swift`, HEAD `3e2a59db`), renombrado a
+/// `JeslyChatProvider`: Coucou ya tiene un `enum ChatProvider`
+/// (`CoucouKit/IslandTypes.swift:115`) y dos tipos con el mismo
+/// nombre en el mismo módulo no compilan. La elección del proveedor
+/// (selector en la vista de chat) llega en la Fase 4, sesión 2; este
+/// struct es solo la lista y la búsqueda por id.
+public struct JeslyChatProvider: Identifiable, Equatable, Sendable {
+    public var id: String
+    public var displayName: String
+    /// Modelo por defecto que configura el router para este proveedor.
+    public var defaultModel: String
+    public var supportsVision: Bool
+
+    public static let all: [JeslyChatProvider] = [
+        JeslyChatProvider(id: "ollama-local", displayName: "Local (Ollama)", defaultModel: "qwen3:8b", supportsVision: false),
+        JeslyChatProvider(id: "freellmapi", displayName: "FreeLLMAPI", defaultModel: "auto", supportsVision: true),
+        JeslyChatProvider(id: "groq", displayName: "Groq", defaultModel: "openai/gpt-oss-20b", supportsVision: false),
+        JeslyChatProvider(id: "gemini", displayName: "Gemini", defaultModel: "gemini-3.5-flash-lite", supportsVision: true),
+        JeslyChatProvider(id: "openrouter", displayName: "OpenRouter", defaultModel: "openrouter/free", supportsVision: true),
+    ]
+
+    public static func byId(_ id: String) -> JeslyChatProvider? {
+        all.first { $0.id == id }
+    }
+}
+
+// MARK: - Verificación y publicación (Fase 4, sesión 1)
+
+/// Una comprobación del informe de verificación
+/// (`verify/verifier.ts`: `CheckResult`). `detail` es el motivo
+/// exacto cuando falla; vacío cuando pasa.
+public struct JeslyVerificationCheck: Codable, Equatable, Sendable {
+    public var name: String
+    public var type: String
+    public var ok: Bool
+    public var detail: String?
+
+    public init(name: String = "", type: String = "", ok: Bool = false, detail: String? = nil) {
+        self.name = name
+        self.type = type
+        self.ok = ok
+        self.detail = detail
+    }
+}
+
+/// Informe de `POST /v1/tasks/:id/verify` (`verify/verifier.ts`:
+/// `VerificationReport`). Un veredicto con fallos NO es un error
+/// HTTP: la ruta responde 200 con el informe, para que JC vea
+/// exactamente qué falló y dónde. `passed` false no es excepción.
+public struct JeslyVerificationReport: Codable, Equatable, Sendable {
+    public var passed: Bool
+    public var verifiedBy: String?
+    public var verifiedAt: String?
+    /// Contra qué se verificó (URL, commit o rama).
+    public var target: String
+    public var checks: [JeslyVerificationCheck]
+
+    public init(passed: Bool = false, verifiedBy: String? = nil, verifiedAt: String? = nil, target: String = "", checks: [JeslyVerificationCheck] = []) {
+        self.passed = passed
+        self.verifiedBy = verifiedBy
+        self.verifiedAt = verifiedAt
+        self.target = target
+        self.checks = checks
+    }
+
+    /// Resumen para la tarjeta: "en verde (2/2)" o "1 fallo: health".
+    public var summary: String {
+        let ok = checks.filter(\.ok).count
+        if checks.isEmpty { return passed ? "en verde" : "sin comprobaciones" }
+        if passed { return "en verde (\(ok)/\(checks.count))" }
+        let firstFailed = checks.first { !$0.ok }
+        return "\(checks.count - ok) fallo\(checks.count - ok == 1 ? "" : "s"): \(firstFailed?.name ?? "")"
+    }
+}
+
+/// Resultado de `POST /v1/tasks/:id/publish`
+/// (`publish/publish.ts`: `PublishRecord`). `status` es
+/// "publicada" (push + deploy si tocaba + verificación en verde),
+/// "parcial" (se publicó algo pero el deploy o la verificación
+/// falló) o "fallida" (ni siquiera se pudo pushear). Nunca se
+/// fusiona a main: eso lo decide JC.
+public struct JeslyPublishRecord: Codable, Equatable, Sendable {
+    public var status: String
+    public var pushed: Bool
+    public var branch: String
+    public var commit: String
+    public var deployed: Bool
+    public var deployUrl: String?
+    public var touchesCloud: Bool
+    /// Dónde se verificó: la URL desplegada o la API/web local.
+    public var target: String?
+    public var verification: JeslyVerificationReport?
+    /// Dónde falló: "push" | "deploy" | "verify" | nil.
+    public var failedAt: String?
+    public var error: String?
+    public var publishedAt: String?
+
+    public init(
+        status: String = "", pushed: Bool = false, branch: String = "", commit: String = "",
+        deployed: Bool = false, deployUrl: String? = nil, touchesCloud: Bool = false,
+        target: String? = nil, verification: JeslyVerificationReport? = nil,
+        failedAt: String? = nil, error: String? = nil, publishedAt: String? = nil
+    ) {
+        self.status = status
+        self.pushed = pushed
+        self.branch = branch
+        self.commit = commit
+        self.deployed = deployed
+        self.deployUrl = deployUrl
+        self.touchesCloud = touchesCloud
+        self.target = target
+        self.verification = verification
+        self.failedAt = failedAt
+        self.error = error
+        self.publishedAt = publishedAt
+    }
+
+    /// Resumen para la tarjeta: "Publicada" / "Parcial: falló en
+    /// deploy" / "Fallida: git push falló…".
+    public var summary: String {
+        switch status {
+        case "publicada": return "Publicada"
+        case "parcial": return "Parcial: falló en \(failedAt ?? "verificación")"
+        case "fallida": return "Fallida: \(error ?? "sin motivo")"
+        default: return status.isEmpty ? "Sin resultado" : status
+        }
     }
 }
