@@ -351,6 +351,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         JeslyProposalsPoller.shared.start()  // Fase 3: propuestas de JESLY (API local, 5 s)
         JeslyProposalStore.shared.start()    // Fase 3 sesión 2: tarjeta Propuesta/Permiso + reglas "Siempre"
         JeslyVoiceStore.shared.start()       // Fase 4 sesión 3: estado del demonio "Oye JESLY" (sondeo 5 s)
+        JeslyWorkflowsStore.shared.start()   // Fase 5 sesión 1: workflows, habilidades y recordatorios (sondeo 15 s)
         StripePoller.shared.start()
         CalcomPoller.shared.start()
         NotionPoller.shared.start()

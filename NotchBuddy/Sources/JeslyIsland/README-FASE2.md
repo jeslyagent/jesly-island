@@ -1081,3 +1081,77 @@ y los adjuntos fallan con el mensaje de error de la isla actual.
 Workflows, habilidades y recordatorios (mapas B y F); decidir qué
 pills de Coucou quedan (Flow, Mail, música, WhatsApp, demo,
 semanal).
+
+## §17. FASE 5, SESIÓN 1 — Workflows, habilidades y recordatorios
+
+### 17.1 Qué se hizo
+
+- Cliente: `workflows()`, `runWorkflow(id:)`, `setWorkflowEnabled(id:enabled:)`,
+  `deleteWorkflow(id:)`; `skills()`, `testSkill/approveSkill/rejectSkill/uninstallSkill(id:)`;
+  `reminders()`, `createReminder(text:)`, `silenceReminder(id:)`, `deleteReminder(id:)`.
+  Se añadió el helper `sendVoid` (rutas sin cuerpo útil), porte verbatim de la isla.
+- Modelo nuevo `JeslyReminder` (forma exacta de `ReminderView` en
+  `personal/reminders.ts`); los comentarios "sin uso" de `JeslyWorkflow`/`JeslySkill`
+  pasan a Fase 5.
+- Store nuevo `JeslyWorkflowsStore` (singleton `@MainActor`, sondeo cada 15 s como la
+  isla, best-effort) + `JeslySkillAction`.
+- Vistas nuevas `JeslyWorkflowsView`, `JeslySkillsView`, `JeslyRemindersView`, porte de
+  `WorkflowsSkillsViews.swift` de la isla (la de recordatorios sigue su mismo estilo;
+  la isla no tiene vista propia de recordatorios, llegan por chat).
+- Ajustes → JESLY: tres GroupBox nuevos (Workflows, Habilidades, Recordatorios) tras
+  las reglas "Siempre". Arranque en `AppDelegate.setupIsland`.
+
+### 17.2 Endpoints (todos existen, con evidencia)
+
+- Workflows (`routes/workflows.ts`, HEAD `3e2a59db`): `GET /v1/workflows`,
+  `POST /v1/workflows/:id/run` (202), `PATCH /v1/workflows/:id { enabled }`,
+  `DELETE /v1/workflows/:id`.
+- Habilidades (`routes/skills.ts`): `GET /v1/skills`,
+  `POST /v1/skills/:id/test|approve|reject|uninstall`. Instalar desde manifiesto es
+  follow-up: `POST /v1/skills/install` existe, pero la isla aún no sube manifiestos.
+- Recordatorios (`routes/reminders.ts`): `POST /v1/reminders { text }` → 201
+  `{ reminder, confirmation, push_configured }`, `GET /v1/reminders`,
+  `POST /v1/reminders/:id/silence`, `DELETE /v1/reminders/:id`.
+
+### 17.3 Qué se ve y dónde
+
+- Ajustes → JESLY → "JESLY — Workflows": nombre + horario, Ejecutar / Pausar-Reanudar /
+  Borrar. Ejecutar crea una tarea: su progreso se ve en la tarjeta de sesión en vivo.
+- "JESLY — Habilidades": nombre + estado + versión + descripción; Probar (en_revision o
+  instalada), Aprobar/Rechazar (en_revision), Desinstalar (instalada).
+- "JESLY — Recordatorios": campo en lenguaje natural + Crear; cada uno con fecha, estado
+  (pendiente/disparado/silenciado), Hecho y Borrar. La confirmación del último creado
+  muestra fecha y hora completas.
+- Con la API apagada las tres listas quedan vacías y se muestra el motivo, sin errores.
+
+### 17.4 Hallazgo: no hay endpoint "hecho"
+
+Un recordatorio ES un workflow programado de un solo disparo con el marcador
+`[recordatorio]`; silenciarlo desactiva el workflow para que no suene más. Por eso el
+botón "Hecho" llama a `POST /v1/reminders/:id/silence`. No se inventó otra ruta.
+
+### 17.5 Verificación sin compilar (hecha)
+
+- Balance llaves/paréntesis/corchetes 0 (escáner Swift-aware con interpolación) en los
+  6 archivos nuevos/tocados.
+- Cada endpoint usado existe en la isla actual y en el servidor (grep contra el cliente
+  de la isla y contra `routes/workflows.ts`, `routes/skills.ts`, `routes/reminders.ts`).
+- Sin colisión de nombres (`JeslyWorkflowsStore`, `JeslyWorkflowsView`, `JeslySkillsView`,
+  `JeslyRemindersView`, `JeslyReminder`, `JeslySkillAction`).
+- `project.yml` sin tocar en esta sesión. **No afirmo que compile** — solo la Mac lo
+  confirma. Sospechosos si falla: `JeslyWorkflowsSkillsViews.swift` o el store nuevo.
+
+### 17.6 Riesgos y límites conocidos
+
+- Las tres listas se refrescan cada 15 s; un run recién lanzado tarda un sondeo en
+  aparecer como tarea en curso (igual que la isla).
+- El historial de recordatorios disparados/silenciados se lista igual que los
+  pendientes: la API no filtra por estado.
+- Sin badge en la pill. Sin instalar habilidades desde manifiesto (follow-up).
+- La decisión de qué pills de Coucou quedan (Flow, Mail, música, WhatsApp, demo,
+  semanal) NO se tomó en esta sesión: va con JC después.
+
+### 17.7 Para la Fase 5, sesión 2
+
+Decidir con JC qué pills de Coucou quedan y quitar o dejar las demás; investigación
+profunda (`POST /v1/investigar`) y cuentas conectadas (mapa F resto); resumen diario.

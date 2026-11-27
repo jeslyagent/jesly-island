@@ -125,6 +125,25 @@ public struct JeslyAPIClient: Sendable {
         }
     }
 
+    /// Como `send`, pero para rutas que no devuelven cuerpo útil
+    /// (run, patch, delete, acciones de habilidad): solo valida 2xx.
+    /// Porte verbatim del cliente de la isla actual.
+    private func sendVoid(_ request: URLRequest) async throws {
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw ClientError.serverUnreachable
+        }
+        guard let http = response as? HTTPURLResponse else {
+            throw ClientError.badResponse("respuesta sin HTTP")
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            throw ClientError.httpStatus(http.statusCode, errorMessage(from: data))
+        }
+    }
+
     // MARK: - Propuestas (`routes/tasks.ts`)
 
     private struct TasksResponse: Decodable {
@@ -255,6 +274,134 @@ public struct JeslyAPIClient: Sendable {
             as: PublishResponse.self
         )
         return (response.task, response.publish)
+    }
+
+    // MARK: - Workflows (`routes/workflows.ts`, Fase 5, sesión 1)
+
+    private struct WorkflowsResponse: Decodable {
+        var workflows: [JeslyWorkflow]
+    }
+
+    /// `GET /v1/workflows` → `{ workflows }`.
+    /// Porte verbatim del cliente de la isla actual.
+    public func workflows() async throws -> [JeslyWorkflow] {
+        let response: WorkflowsResponse = try await send(
+            request(path: "/v1/workflows"),
+            as: WorkflowsResponse.self
+        )
+        return response.workflows
+    }
+
+    /// Disparar ahora. `POST /v1/workflows/:id/run` → 202.
+    /// El progreso se ve como una tarea en curso (el run crea una
+    /// tarea que el poller de propuestas ya trae).
+    public func runWorkflow(id: String) async throws {
+        try await sendVoid(request(path: "/v1/workflows/\(id)/run", method: "POST", jsonBody: [:]))
+    }
+
+    /// Pausar / reanudar. `PATCH /v1/workflows/:id { enabled }`.
+    public func setWorkflowEnabled(id: String, enabled: Bool) async throws {
+        try await sendVoid(request(path: "/v1/workflows/\(id)", method: "PATCH", jsonBody: ["enabled": enabled]))
+    }
+
+    /// Borrar. `DELETE /v1/workflows/:id`.
+    public func deleteWorkflow(id: String) async throws {
+        try await sendVoid(request(path: "/v1/workflows/\(id)", method: "DELETE"))
+    }
+
+    // MARK: - Habilidades (`routes/skills.ts`, Fase 5, sesión 1)
+
+    private struct SkillsResponse: Decodable {
+        var skills: [JeslySkill]
+    }
+
+    /// `GET /v1/skills` → `{ skills }`.
+    /// Porte verbatim del cliente de la isla actual.
+    public func skills() async throws -> [JeslySkill] {
+        let response: SkillsResponse = try await send(
+            request(path: "/v1/skills"),
+            as: SkillsResponse.self
+        )
+        return response.skills
+    }
+
+    /// Probar en aislado. `POST /v1/skills/:id/test`.
+    /// Solo en_revision o instalada (la vista ya lo filtra).
+    public func testSkill(id: String) async throws {
+        try await sendVoid(request(path: "/v1/skills/\(id)/test", method: "POST", jsonBody: [:]))
+    }
+
+    /// Aprobar. `POST /v1/skills/:id/approve` (en_revision → instalada).
+    public func approveSkill(id: String) async throws {
+        try await sendVoid(request(path: "/v1/skills/\(id)/approve", method: "POST", jsonBody: [:]))
+    }
+
+    /// Rechazar. `POST /v1/skills/:id/reject` (en_revision → rechazada).
+    public func rejectSkill(id: String) async throws {
+        try await sendVoid(request(path: "/v1/skills/\(id)/reject", method: "POST", jsonBody: [:]))
+    }
+
+    /// Desinstalar. `POST /v1/skills/:id/uninstall` (instalada → desinstalada).
+    public func uninstallSkill(id: String) async throws {
+        try await sendVoid(request(path: "/v1/skills/\(id)/uninstall", method: "POST", jsonBody: [:]))
+    }
+
+    // MARK: - Recordatorios (`routes/reminders.ts`, Fase 5, sesión 1)
+
+    private struct RemindersResponse: Decodable {
+        var reminders: [JeslyReminder]
+    }
+
+    private struct CreateReminderResponse: Decodable {
+        var reminder: JeslyReminder
+        var confirmation: String?
+        var pushConfigured: Bool?
+    }
+
+    private struct ReminderResponse: Decodable {
+        var reminder: JeslyReminder
+    }
+
+    /// `GET /v1/reminders` → `{ reminders }` (pendiente/disparado/
+    /// silenciado). Un recordatorio ES un workflow programado de un
+    /// solo disparo con el marcador `[recordatorio]`.
+    public func reminders() async throws -> [JeslyReminder] {
+        let response: RemindersResponse = try await send(
+            request(path: "/v1/reminders"),
+            as: RemindersResponse.self
+        )
+        return response.reminders
+    }
+
+    /// Crear desde lenguaje natural. `POST /v1/reminders { text }`
+    /// → 201 `{ reminder, confirmation, push_configured }`. Si la
+    /// fecha/hora no se entiende, el servidor responde 400 con la
+    /// pregunta: nunca se adivina una hora en Swift, el parser vive
+    /// en la API. La confirmación lleva fecha y hora completas.
+    public func createReminder(text: String) async throws -> (reminder: JeslyReminder, confirmation: String?) {
+        let response: CreateReminderResponse = try await send(
+            request(path: "/v1/reminders", method: "POST", jsonBody: ["text": text]),
+            as: CreateReminderResponse.self
+        )
+        return (response.reminder, response.confirmation)
+    }
+
+    /// Marcar hecho: silenciar. `POST /v1/reminders/:id/silence` →
+    /// `{ reminder }`. No hay endpoint "hecho" en el servidor: un
+    /// recordatorio es un workflow y silenciarlo lo desactiva para
+    /// que no suene más. Por eso el botón dice "Hecho" y llama a
+    /// silence, nunca se inventa otra ruta.
+    public func silenceReminder(id: String) async throws -> JeslyReminder {
+        let response: ReminderResponse = try await send(
+            request(path: "/v1/reminders/\(id)/silence", method: "POST", jsonBody: [:]),
+            as: ReminderResponse.self
+        )
+        return response.reminder
+    }
+
+    /// Borrar. `DELETE /v1/reminders/:id` → `{ deleted: true }`.
+    public func deleteReminder(id: String) async throws {
+        try await sendVoid(request(path: "/v1/reminders/\(id)", method: "DELETE"))
     }
 
     // MARK: - Voz y escucha (`routes/voice.ts`, `voice/wake.ts`, Fase 4, sesión 3)

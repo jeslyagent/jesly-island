@@ -756,3 +756,47 @@ formato real de `POST /v1/chat` (grep). `project.yml` sin tocar.
 Workflows, habilidades y recordatorios (mapas B y F); decidir qué
 pills de Coucou quedan. Riesgos: el demonio no lo arranca la app;
 el intercambio de voz queda sin modelo en el historial.
+
+## FASE 5, SESIÓN 1 — Workflows, habilidades y recordatorios
+
+### 1. Qué se hizo
+
+- `JeslyIsland/Api/JeslyAPIClient.swift`: `sendVoid` + workflows (`workflows`,
+  `runWorkflow`, `setWorkflowEnabled`, `deleteWorkflow`), habilidades (`skills`,
+  `testSkill`, `approveSkill`, `rejectSkill`, `uninstallSkill`) y recordatorios
+  (`reminders`, `createReminder`, `silenceReminder`, `deleteReminder`).
+- `JeslyIsland/Api/JeslyModels.swift`: modelo nuevo `JeslyReminder` (forma exacta
+  de `ReminderView`); comentarios "sin uso" de `JeslyWorkflow`/`JeslySkill` a Fase 5.
+- `JeslyIsland/JeslyWorkflowsStore.swift` (nuevo): singleton `@MainActor`, sondeo
+  cada 15 s como la isla, best-effort; `JeslySkillAction`.
+- `JeslyIsland/Views/JeslyWorkflowsSkillsViews.swift` (nuevo): `JeslyWorkflowsView`,
+  `JeslySkillsView`, `JeslyRemindersView` (porte de la isla; la de recordatorios
+  sigue su estilo, la isla no tiene vista propia).
+- `App/SettingsView.swift`: tres GroupBox en la sección JESLY (Workflows,
+  Habilidades, Recordatorios). `App/AppDelegate.swift`: `JeslyWorkflowsStore.shared.start()`.
+
+### 2. Endpoints (todos existen, con evidencia)
+
+- Workflows `routes/workflows.ts`: `GET /v1/workflows`, `POST /v1/workflows/:id/run`,
+  `PATCH /v1/workflows/:id { enabled }`, `DELETE /v1/workflows/:id`.
+- Habilidades `routes/skills.ts`: `GET /v1/skills`, `POST /v1/skills/:id/test|approve|reject|uninstall`.
+  Instalar desde manifiesto es follow-up (`POST /v1/skills/install` existe, la isla
+  aún no sube manifiestos).
+- Recordatorios `routes/reminders.ts`: `POST /v1/reminders { text }` → 201,
+  `GET /v1/reminders`, `POST /v1/reminders/:id/silence`, `DELETE /v1/reminders/:id`.
+- Hallazgo: no hay endpoint "hecho". El botón "Hecho" llama a silence (desactiva el
+  workflow para que no suene más). No se inventó otra ruta.
+
+### 3. Verificación sin compilar (hecha)
+
+Balance 0 en los 6 archivos nuevos/tocados (escáner Swift-aware); cada endpoint usado
+existe en la isla y en el servidor (grep); sin colisión de nombres. `project.yml` sin
+tocar. **Sin compilar: solo la Mac lo confirma.** Sospechosos:
+`JeslyWorkflowsSkillsViews.swift` o el store nuevo.
+
+### 4. Para la Fase 5, sesión 2
+
+Decidir con JC qué pills de Coucou quedan (Flow, Mail, música, WhatsApp, demo,
+semanal) y quitar o dejar las demás; investigación profunda (`POST /v1/investigar`) y
+cuentas conectadas; resumen diario. Riesgos: el run tarda un sondeo en verse como
+tarea en curso; sin instalar habilidades desde manifiesto.

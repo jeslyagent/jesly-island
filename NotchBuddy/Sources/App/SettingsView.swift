@@ -6,6 +6,8 @@ struct SettingsView: View {
     @ObservedObject private var state = AppState.shared
     @ObservedObject private var demoEngine = DemoEngine.shared
     @ObservedObject private var jeslyStore = JeslyProposalStore.shared
+    // JESLY (Fase 5, sesión 1): workflows, habilidades y recordatorios.
+    @ObservedObject private var jeslyWorkflowsStore = JeslyWorkflowsStore.shared
     @State private var apiKey: String = KeychainStore.shared.get("anthropic-api-key") ?? ""
     // JESLY (Fase 3): la clave se lee del llavero al abrir Ajustes; el
     // SecureField la oculta y solo se guarda con el botón Guardar.
@@ -725,6 +727,50 @@ struct SettingsView: View {
             .padding(6)
         }
             .settingsAnchor("jesly.always")
+
+        // MARK: - JESLY workflows, habilidades y recordatorios (Fase 5, sesión 1)
+
+        /// Viven en la sección JESLY, como en la isla actual (donde
+        /// están en Ajustes). Con la API apagada las tres listas
+        /// quedan vacías y se muestra el motivo, sin errores.
+        GroupBox("JESLY — Workflows") {
+            VStack(alignment: .leading, spacing: 8) {
+                JeslyWorkflowsView(store: jeslyWorkflowsStore)
+                if !jeslyWorkflowsStore.apiReachable, let error = jeslyWorkflowsStore.lastError {
+                    Text(error)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(6)
+        }
+            .settingsAnchor("jesly.workflows")
+
+        GroupBox("JESLY — Habilidades") {
+            VStack(alignment: .leading, spacing: 8) {
+                JeslySkillsView(store: jeslyWorkflowsStore)
+                if !jeslyWorkflowsStore.apiReachable, let error = jeslyWorkflowsStore.lastError {
+                    Text(error)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(6)
+        }
+            .settingsAnchor("jesly.skills")
+
+        GroupBox("JESLY — Recordatorios") {
+            VStack(alignment: .leading, spacing: 8) {
+                JeslyRemindersView(store: jeslyWorkflowsStore)
+                if !jeslyWorkflowsStore.apiReachable, let error = jeslyWorkflowsStore.lastError {
+                    Text(error)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(6)
+        }
+            .settingsAnchor("jesly.reminders")
     }
 
     // MARK: - Agents section

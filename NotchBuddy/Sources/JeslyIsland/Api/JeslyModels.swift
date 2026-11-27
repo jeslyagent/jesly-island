@@ -138,7 +138,7 @@ public struct ChatAttachment: Codable, Equatable, Sendable {
 }
 
 /// Workflow (`GET /v1/workflows`, `routes/workflows.ts`).
-/// (Sin uso en esta sesión; los workflows llegan en la Fase 5.)
+/// (Fase 5, sesión 1: los workflows llegan aquí.)
 public struct JeslyWorkflow: Codable, Identifiable, Equatable {
     public var id: String
     public var name: String
@@ -155,7 +155,7 @@ public struct JeslyWorkflow: Codable, Identifiable, Equatable {
 
 /// Habilidad (`GET /v1/skills`, `routes/skills.ts`).
 /// Estados: en_revision, instalada, rechazada, desinstalada.
-/// (Sin uso en esta sesión; las habilidades llegan en la Fase 5.)
+/// (Fase 5, sesión 1: las habilidades llegan aquí.)
 public struct JeslySkill: Codable, Identifiable, Equatable {
     public var id: String
     public var name: String
@@ -164,6 +164,27 @@ public struct JeslySkill: Codable, Identifiable, Equatable {
     public var status: String
     public var createdAt: String?
     public var updatedAt: String?
+}
+
+/// Recordatorio (`GET /v1/reminders`, `routes/reminders.ts`,
+/// forma exacta de `ReminderView` en `personal/reminders.ts`).
+/// Un recordatorio ES un workflow programado de un solo disparo
+/// con el marcador `[recordatorio]`; `id` es el id del workflow.
+/// `estado`: pendiente | disparado | silenciado. `at` es el instante
+/// UTC al que suena. (Fase 5, sesión 1.)
+public struct JeslyReminder: Codable, Identifiable, Equatable {
+    public var id: String
+    public var text: String
+    public var at: String
+    public var schedule: String
+    public var estado: String
+    public var workflowId: String
+    public var createdAt: String
+
+    /// Fecha legible para la fila: la API ya manda `at` en ISO8601.
+    public var atDate: Date? {
+        ISO8601DateFormatter().date(from: at)
+    }
 }
 
 /// Estado del demonio "Oye JESLY" (`GET /v1/voice/wake/status`,
