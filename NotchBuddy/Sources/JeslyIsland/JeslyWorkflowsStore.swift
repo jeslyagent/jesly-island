@@ -22,7 +22,17 @@ import Foundation
 ///   recordatorio es un workflow y silenciarlo lo desactiva para
 ///   que no suene más; el botón "Hecho" llama a silence.
 ///
-/// Con la API apagada las tres listas quedan vacías y `lastError`
+/// Fase 5, sesión 2: cuentas conectadas y resumen diario, con el
+/// mismo sondeo y el mismo best-effort.
+/// - Cuentas: `GET /v1/cuentas` → `{ cuentas }` (sin tokens).
+///   Solo lectura: conectar no se hace desde la isla.
+/// - Resumen: `GET /v1/resumen-diario` (vista previa),
+///   `POST /v1/resumen-diario { hora }` (programar),
+///   `DELETE /v1/resumen-diario` (apagar). El resumen programado
+///   ES un workflow ("Resumen diario — buenos días"), así que su
+///   hora se deriva de la lista de workflows, nunca se inventa.
+///
+/// Con la API apagada las listas quedan vacías y `lastError`
 /// guarda el motivo, igual que el resto de JESLY.
 @MainActor
 final class JeslyWorkflowsStore: ObservableObject {
@@ -31,6 +41,17 @@ final class JeslyWorkflowsStore: ObservableObject {
     @Published private(set) var workflows: [JeslyWorkflow] = []
     @Published private(set) var skills: [JeslySkill] = []
     @Published private(set) var reminders: [JeslyReminder] = []
+    /// Cuentas conectadas (Fase 5, sesión 2): Google y GitHub,
+    /// solo lectura.
+    @Published private(set) var accounts: [JeslyConnectedAccount] = []
+    /// Vista previa del resumen de hoy (Fase 5, sesión 2): nil
+    /// hasta la primera carga.
+    @Published private(set) var dailyDigest: JeslyDailyDigest?
+    /// Hora a la que llega el resumen cada día ("8:00"), nil si no
+    /// hay ninguno programado. Se deriva del workflow programado
+    /// "Resumen diario — buenos días" (cron `M H * * *`): si el
+    /// workflow no está en la lista, no hay hora.
+    @Published private(set) var digestHour: String?
     /// ¿La última carga llegó bien a la API?
     @Published private(set) var apiReachable: Bool = false
     /// Motivo del último fallo, nil cuando fue bien.
@@ -38,6 +59,10 @@ final class JeslyWorkflowsStore: ObservableObject {
     /// Confirmación del último recordatorio creado (fecha y hora
     /// completas, para que JC vea si el parser entendió otro día).
     @Published private(set) var lastReminderConfirmation: String?
+
+    /// Nombre único del workflow del resumen diario
+    /// (`routes/digest.ts`: `DIGEST_WORKFLOW_NAME`).
+    static let digestWorkflowName = "Resumen diario — buenos días"
 
     private var started = false
     private var timer: Timer?
@@ -56,12 +81,14 @@ final class JeslyWorkflowsStore: ObservableObject {
         }
     }
 
-    /// Recarga las tres listas. Best-effort: si la API no responde
+    /// Recarga las listas. Best-effort: si la API no responde
     /// se mantiene lo último.
     func refreshAll() async {
         await refreshWorkflows()
         await refreshSkills()
         await refreshReminders()
+        await refreshAccounts()
+        await refreshDailyDigest()
     }
 
     func refreshWorkflows() async {
@@ -69,6 +96,7 @@ final class JeslyWorkflowsStore: ObservableObject {
             workflows = try await JeslyAPIClient().workflows()
             apiReachable = true
             lastError = nil
+            updateDigestHour()
         } catch {
             apiReachable = false
             lastError = error.localizedDescription
@@ -94,6 +122,47 @@ final class JeslyWorkflowsStore: ObservableObject {
         } catch {
             apiReachable = false
             lastError = error.localizedDescription
+        }
+    }
+
+    /// Cuentas conectadas. `GET /v1/cuentas` → `{ cuentas }`
+    /// (sin tokens). Sin cuentas, la lista vacía.
+    func refreshAccounts() async {
+        do {
+            accounts = try await JeslyAPIClient().connectedAccounts()
+            apiReachable = true
+            lastError = nil
+        } catch {
+            apiReachable = false
+            lastError = error.localizedDescription
+        }
+    }
+
+    /// Vista previa del resumen de hoy. `GET /v1/resumen-diario`.
+    func refreshDailyDigest() async {
+        do {
+            dailyDigest = try await JeslyAPIClient().dailyDigest()
+            apiReachable = true
+            lastError = nil
+        } catch {
+            apiReachable = false
+            lastError = error.localizedDescription
+        }
+    }
+
+    /// Deriva la hora del resumen del workflow programado, si lo
+    /// hay. El cron es `M H * * *`: "30 8 * * *" → "8:30".
+    private func updateDigestHour() {
+        guard let workflow = workflows.first(where: { $0.name == Self.digestWorkflowName }),
+              let schedule = workflow.schedule else {
+            digestHour = nil
+            return
+        }
+        let parts = schedule.split(separator: " ")
+        if parts.count >= 2, let minute = Int(parts[0]), let hour = Int(parts[1]) {
+            digestHour = "\(hour):\(minute < 10 ? "0\(minute)" : "\(minute)")"
+        } else {
+            digestHour = nil
         }
     }
 
@@ -195,6 +264,39 @@ final class JeslyWorkflowsStore: ObservableObject {
             try await JeslyAPIClient().deleteReminder(id: reminder.id)
             lastError = nil
             await refreshReminders()
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    // MARK: - Resumen diario
+
+    /// Programar el resumen a una hora. `POST /v1/resumen-diario
+    /// { hora }` → crea o actualiza el workflow programado
+    /// "Resumen diario — buenos días". La hora la valida la API
+    /// (400 si no es HH:MM); nunca se adivina en Swift. Tras
+    /// programar, la hora se lee de la respuesta y se refrescan
+    /// workflows y vista previa.
+    func scheduleDailyDigest(hour: String) async {
+        do {
+            let response = try await JeslyAPIClient().scheduleDailyDigest(hour: hour)
+            lastError = nil
+            digestHour = response.hora
+            await refreshWorkflows()
+            await refreshDailyDigest()
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    /// Apagar el resumen programado. `DELETE /v1/resumen-diario`.
+    /// 404 si no hay ninguno programado: el error llega claro.
+    func deleteDailyDigest() async {
+        do {
+            try await JeslyAPIClient().deleteDailyDigest()
+            lastError = nil
+            digestHour = nil
+            await refreshWorkflows()
         } catch {
             lastError = error.localizedDescription
         }

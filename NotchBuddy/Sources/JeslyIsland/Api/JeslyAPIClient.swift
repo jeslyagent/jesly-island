@@ -404,6 +404,72 @@ public struct JeslyAPIClient: Sendable {
         try await sendVoid(request(path: "/v1/reminders/\(id)", method: "DELETE"))
     }
 
+    // MARK: - Investigación profunda (`routes/investigar.ts`, Fase 5, sesión 2)
+
+    /// Investigar en la web sin pasar por el chat.
+    /// `POST /v1/investigar { pregunta, provider? }` → 200
+    /// `{ respuesta, fuentes, fechaConsulta, consultas,
+    /// paginasFallidas, fuente, provider?, model? }`.
+    /// 400 sin pregunta o con más de 1000 caracteres; 503 sin
+    /// acceso a la web (nunca una respuesta inventada). Sin router
+    /// o si el modelo falla, la respuesta es la extractiva con las
+    /// mismas fuentes (`fuente: "extractiva"`).
+    public func investigate(pregunta: String, provider: String? = nil) async throws -> JeslyResearchResult {
+        var body: [String: Any] = ["pregunta": pregunta]
+        if let provider { body["provider"] = provider }
+        return try await send(
+            request(path: "/v1/investigar", method: "POST", jsonBody: body),
+            as: JeslyResearchResult.self
+        )
+    }
+
+    // MARK: - Cuentas conectadas (`routes/cuentas.ts`, Fase 5, sesión 2)
+
+    private struct AccountsResponse: Decodable {
+        var cuentas: [JeslyConnectedAccount]
+    }
+
+    /// `GET /v1/cuentas` → `{ cuentas }` (sin tokens).
+    /// Proveedores reales: google y github. Sin cuentas conectadas
+    /// devuelve la lista vacía; sin base de datos, 503.
+    /// Solo lectura en esta sesión.
+    public func connectedAccounts() async throws -> [JeslyConnectedAccount] {
+        let response: AccountsResponse = try await send(
+            request(path: "/v1/cuentas"),
+            as: AccountsResponse.self
+        )
+        return response.cuentas
+    }
+
+    // MARK: - Resumen diario (`routes/digest.ts`, Fase 5, sesión 2)
+
+    /// Vista previa del resumen de hoy, compuesto ahora mismo desde
+    /// las fuentes reales. `GET /v1/resumen-diario` →
+    /// `{ digest, propuestas, pendientes, workflows_hoy, recuerdos,
+    /// errores }`. Sin base de datos, 503.
+    public func dailyDigest() async throws -> JeslyDailyDigest {
+        try await send(request(path: "/v1/resumen-diario"), as: JeslyDailyDigest.self)
+    }
+
+    /// Programar el resumen: crea o actualiza el workflow
+    /// "Resumen diario — buenos días" (cron `M H * * *`, marcador
+    /// `[resumen-diario]`). `POST /v1/resumen-diario { hora }` →
+    /// 201/200 `{ workflow, hora, push_configured }`. 400 sin hora
+    /// o con formato distinto de HH:MM; la hora la valida la API,
+    /// nunca se adivina en Swift.
+    public func scheduleDailyDigest(hour: String) async throws -> JeslyDigestScheduleResponse {
+        try await send(
+            request(path: "/v1/resumen-diario", method: "POST", jsonBody: ["hora": hour]),
+            as: JeslyDigestScheduleResponse.self
+        )
+    }
+
+    /// Apagar el resumen programado. `DELETE /v1/resumen-diario` →
+    /// `{ deleted: true }`. 404 si no hay ninguno programado.
+    public func deleteDailyDigest() async throws {
+        try await sendVoid(request(path: "/v1/resumen-diario", method: "DELETE"))
+    }
+
     // MARK: - Voz y escucha (`routes/voice.ts`, `voice/wake.ts`, Fase 4, sesión 3)
 
     /// Estado del demonio "Oye JESLY".

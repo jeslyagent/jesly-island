@@ -353,3 +353,112 @@ public struct JeslyPublishRecord: Codable, Equatable, Sendable {
         }
     }
 }
+
+// MARK: - Investigación profunda, cuentas conectadas y resumen diario (Fase 5, sesión 2)
+
+/// Una fuente de `POST /v1/investigar` (`research/deep-research.ts`:
+/// `ResearchSource`). `fecha` es la fecha de publicación si la
+/// página la trae; si no, la fecha de consulta. `fechaPublicacion`
+/// es null cuando la página no trae fecha. `verificada` es true
+/// solo si la página se descargó y se leyó; si no, solo se tiene
+/// el fragmento del buscador.
+public struct JeslyResearchSource: Codable, Equatable, Sendable {
+    public var titulo: String
+    public var url: String
+    public var fecha: String
+    public var fechaPublicacion: String?
+    public var verificada: Bool
+    public var fragmento: String
+}
+
+/// Una página que no se pudo leer durante la investigación
+/// (`research/deep-research.ts`: `FailedPage`).
+public struct JeslyFailedPage: Codable, Equatable, Sendable {
+    public var url: String
+    public var motivo: String
+}
+
+/// Respuesta de `POST /v1/investigar` (`routes/investigar.ts`).
+/// Exactamente lo que devuelve la ruta: `respuesta, fuentes,
+/// fechaConsulta, consultas, paginasFallidas, fuente` y, solo
+/// cuando el router sintetizó, `provider` y `model`. `fuente` es
+/// "modelo" (el router sintetizó desde los hallazgos, con el
+/// formato fijo) o "extractiva" (la composición determinista de
+/// los fragmentos, cuando no hay router o el modelo falló).
+public struct JeslyResearchResult: Codable, Equatable, Sendable {
+    public var respuesta: String
+    public var fuentes: [JeslyResearchSource]
+    public var fechaConsulta: String
+    public var consultas: [String]
+    public var paginasFallidas: [JeslyFailedPage]
+    public var fuente: String
+    public var provider: String?
+    public var model: String?
+
+    /// "2 fuentes · 1 verificada" para la fila del chat.
+    public var sourcesSummary: String {
+        let verified = fuentes.filter(\.verificada).count
+        return "\(fuentes.count) fuente\(fuentes.count == 1 ? "" : "s") · \(verified) verificada\(verified == 1 ? "" : "s")"
+    }
+
+    /// Día de la consulta (YYYY-MM-DD) para la fila del chat.
+    public var consultationDay: String {
+        String(fechaConsulta.prefix(10))
+    }
+}
+
+/// Una cuenta conectada (`GET /v1/cuentas`, `accounts/store.ts`:
+/// `PublicAccount`). Identidad y vigencia, NUNCA tokens: es lo
+/// único que sale por las rutas. `proveedor` es "google" | "github".
+/// Solo lectura en esta sesión: conectar una cuenta no se hace
+/// desde la isla (Google es OAuth con redirect y GitHub pide un
+/// token fine-grained de solo lectura).
+public struct JeslyConnectedAccount: Codable, Identifiable, Equatable {
+    public var proveedor: String
+    public var cuenta: String
+    public var scopes: [String]
+    public var expira: String?
+    public var conectado: String
+    public var actualizado: String
+
+    public var id: String { "\(proveedor):\(cuenta)" }
+
+    /// "Google" / "GitHub" para la fila.
+    public var providerDisplayName: String {
+        proveedor == "github" ? "GitHub" : "Google"
+    }
+}
+
+/// Un workflow programado para hoy, del resumen diario
+/// (`personal/digest.ts`: `DigestWorkflowToday`). `at` es la
+/// primera hora local a la que dispara hoy ("08:00").
+public struct JeslyDigestWorkflowToday: Codable, Equatable, Sendable {
+    public var id: String
+    public var name: String
+    public var schedule: String
+    public var at: String
+}
+
+/// Respuesta de `GET /v1/resumen-diario` (`routes/digest.ts`).
+/// `digest` es el texto compuesto ("Buenos días, JC…"); los
+/// contadores son lo mismo que el texto ya resume, para la fila.
+/// `errores` nombra las fuentes que no se pudieron leer
+/// ("propuestas", "tareas"…): una fuente caída no tumba el resumen.
+public struct JeslyDailyDigest: Codable, Equatable, Sendable {
+    public var digest: String
+    public var propuestas: Int
+    public var pendientes: Int
+    public var workflowsHoy: [JeslyDigestWorkflowToday]
+    public var recuerdos: Int
+    public var errores: [String]
+}
+
+/// Respuesta de `POST /v1/resumen-diario` (`routes/digest.ts`).
+/// `workflow` es el workflow programado (nombre "Resumen diario —
+/// buenos días", la misma forma de `JeslyWorkflow`); `hora` es
+/// "H:MM" y `pushConfigured` dice si las push están configuradas.
+public struct JeslyDigestScheduleResponse: Codable, Equatable, Sendable {
+    public var workflow: JeslyWorkflow
+    public var hora: String
+    public var pushConfigured: Bool?
+}

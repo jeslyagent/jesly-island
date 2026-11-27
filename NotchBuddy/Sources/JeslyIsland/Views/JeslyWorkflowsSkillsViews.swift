@@ -230,3 +230,136 @@ struct JeslyRemindersView: View {
         }
     }
 }
+
+/// Cuentas conectadas: solo lectura.
+///
+/// La isla actual no tiene vista de cuentas (su pill "Correo" es
+/// "Próximamente — cuentas conectadas (§11)"); esta vista usa solo
+/// el endpoint real (`routes/cuentas.ts`):
+/// - `GET /v1/cuentas` → `{ cuentas }` (sin tokens: proveedor,
+///   cuenta, scopes, expira, conectado, actualizado).
+/// Conectar una cuenta no se hace aquí: Google es OAuth con
+/// redirect y GitHub pide un token fine-grained de solo lectura;
+/// eso queda para una sesión posterior.
+struct JeslyAccountsView: View {
+    @ObservedObject var store: JeslyWorkflowsStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Cuentas conectadas")
+                .font(.system(size: 12, weight: .semibold))
+            if store.accounts.isEmpty {
+                Text("Sin cuentas conectadas. Google (Gmail y Calendario) y GitHub se conectan desde el servidor; la isla solo las lee.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            ForEach(store.accounts) { account in
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(account.providerDisplayName)
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(account.cuenta)
+                            .font(.system(size: 12))
+                        Spacer()
+                        Text("Conectada")
+                            .font(.system(size: 10))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color(nsColor: .controlBackgroundColor))
+                            .clipShape(Capsule())
+                    }
+                    if !account.scopes.isEmpty {
+                        Text(account.scopes.joined(separator: ", "))
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    if let expira = account.expira {
+                        Text("El acceso expira: \(expira)")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(8)
+                .background(Color(nsColor: .controlBackgroundColor).opacity(0.6))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
+    }
+}
+
+/// Resumen diario: vista previa + programar + apagar.
+///
+/// La isla actual no tiene vista de resumen (llega por chat/push
+/// cuando JC dice "buenos días"); esta vista usa solo endpoints
+/// reales (`routes/digest.ts`):
+/// - `GET /v1/resumen-diario` (vista previa, compuesta ahora
+///   mismo desde las fuentes reales)
+/// - `POST /v1/resumen-diario { hora }` (crea o actualiza el
+///   workflow programado "Resumen diario — buenos días")
+/// - `DELETE /v1/resumen-diario` (apaga el programado)
+/// El resumen programado ES un workflow: se ve en la lista de
+/// workflows con su horario, no es un endpoint aparte.
+struct JeslyDailyDigestView: View {
+    @ObservedObject var store: JeslyWorkflowsStore
+    @State private var hourText: String = "8:00"
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Resumen diario")
+                .font(.system(size: 12, weight: .semibold))
+            if let hour = store.digestHour {
+                Text("Programado a las \(hour): llega por push cada día.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            } else {
+                Text("Sin programar: el resumen solo se ve aquí cuando lo pides.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            HStack(spacing: 8) {
+                TextField("8:00", text: $hourText)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 12))
+                    .frame(width: 70)
+                Button("Programar") {
+                    let hour = hourText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !hour.isEmpty else { return }
+                    Task { await store.scheduleDailyDigest(hour: hour) }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(hourText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                if store.digestHour != nil {
+                    Button("Apagar") {
+                        Task { await store.deleteDailyDigest() }
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.red)
+                }
+                Button("Ver el de hoy") {
+                    Task { await store.refreshDailyDigest() }
+                }
+                .buttonStyle(.bordered)
+            }
+            .font(.system(size: 12))
+            if let digest = store.dailyDigest {
+                Text(digest.digest)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                    .textSelection(.enabled)
+                Text("Propuestas \(digest.propuestas) · pendientes \(digest.pendientes) · hoy \(digest.workflowsHoy.count) · recuerdos \(digest.recuerdos)")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                if !digest.errores.isEmpty {
+                    Text("Sin leer: \(digest.errores.joined(separator: ", ")).")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .onAppear {
+            if let hour = store.digestHour {
+                hourText = hour
+            }
+        }
+    }
+}

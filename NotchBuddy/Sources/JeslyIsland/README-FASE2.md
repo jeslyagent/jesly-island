@@ -1163,3 +1163,181 @@ botón "Hecho" llama a `POST /v1/reminders/:id/silence`. No se inventó otra rut
 
 Decidir con JC qué pills de Coucou quedan y quitar o dejar las demás; investigación
 profunda (`POST /v1/investigar`) y cuentas conectadas (mapa F resto); resumen diario.
+
+## §18. FASE 5, SESIÓN 2 — Investigación profunda, cuentas conectadas, resumen diario
+
+### 18.1 Qué se hizo
+
+- **Investigación profunda** (desde el chat de JESLY): botón de lupa junto
+  al micrófono que activa el modo investigar; el envío va por
+  `POST /v1/investigar` en vez de por el chat (con adjuntos no hay
+  investigación: cae al chat normal). La isla actual no tiene este
+  botón: su agente investiga con la herramienta interna
+  (`investigar_profundo`); aquí la investigación se pide explícita
+  y el informe llega con sus fuentes como enlaces que se pueden abrir.
+  Mientras investiga se ve "Investigando en la web… puede tardar unos
+  segundos." (tarda más que un chat: varias búsquedas + descarga de
+  páginas). Modelos nuevos `JeslyResearchResult`, `JeslyResearchSource`,
+  `JeslyFailedPage`; el mensaje de chat guarda el informe entero
+  (`JeslyChatMessage.research`).
+- **Cuentas conectadas** (solo lectura): GroupBox nuevo "JESLY — Cuentas
+  conectadas" en Ajustes → JESLY (proveedor, cuenta, scopes, expira).
+  Sin cuentas, el texto dice que se conectan desde el servidor.
+  Conectar no se hace desde la isla: Google es OAuth con redirect y
+  GitHub pide un token fine-grained de solo lectura.
+- **Resumen diario**: GroupBox nuevo "JESLY — Resumen diario" en
+  Ajustes → JESLY. Vista previa con "Ver el de hoy" (texto compuesto
+  + contadores + fuentes sin leer), programar por hora ("8:00") y
+  Apagar. El resumen programado ES un workflow ("Resumen diario —
+  buenos días", marcador `[resumen-diario]`): su hora se deriva de
+  la lista de workflows (cron `M H * * *`), nunca se inventa.
+- Store `JeslyWorkflowsStore`: `accounts`, `dailyDigest`, `digestHour`
+  + `refreshAccounts()` / `refreshDailyDigest()` en el sondeo de 15 s
+  y acciones `scheduleDailyDigest(hour:)` / `deleteDailyDigest()`.
+
+### 18.2 Endpoints (todos existen, con evidencia)
+
+Montados en `apps/api/src/index.ts` (digest :153, investigar :158,
+cuentas :160), HEAD del scaffold = isla actual:
+
+- Investigación (`routes/investigar.ts`): `POST /v1/investigar
+  { pregunta, provider? }` → 200 `{ respuesta, fuentes: [{ titulo,
+  url, fecha, fechaPublicacion, verificada, fragmento }],
+  fechaConsulta, consultas, paginasFallidas, fuente, provider?,
+  model? }`. 400 sin pregunta o >1000 caracteres; 503 sin acceso a
+  la web (nunca una respuesta inventada). `fuente` es "modelo" (el
+  router sintetizó) o "extractiva" (sin router o el modelo falló).
+  `MAX_PAGES = 8` (`research/deep-research.ts`).
+- Cuentas (`routes/cuentas.ts`): `GET /v1/cuentas` → `{ cuentas }`
+  (`accounts/store.ts`: `PublicAccount`: proveedor, cuenta, scopes,
+  expira, conectado, actualizado; sin tokens). Sin cuentas, lista
+  vacía; sin base de datos, 503. Conectar/desconectar quedan fuera
+  de esta sesión por decisión (no por falta de endpoint: existen
+  `POST /v1/cuentas/:proveedor/conectar|desconectar`).
+- Resumen (`routes/digest.ts`): `GET /v1/resumen-diario` →
+  `{ digest, propuestas, pendientes, workflows_hoy, recuerdos,
+  errores }`; `POST /v1/resumen-diario { hora }` → 201/200
+  `{ workflow, hora, push_configured }` (crea o actualiza el
+  workflow "Resumen diario — buenos días", `DIGEST_WORKFLOW_NAME`);
+  `DELETE /v1/resumen-diario` → `{ deleted: true }` (404 si no hay
+  ninguno). 400 sin hora o con formato distinto de HH:MM; 503 sin
+  base de datos.
+
+### 18.3 Dónde se ve y qué pasa con la API apagada
+
+- Chat de JESLY (isla): lupa junto al micrófono; con el modo activo
+  el campo dice "Investiga en la web…". La respuesta trae el informe
+  en formato fijo + la línea "Investigación · modelo/extractiva ·
+  N fuentes · M verificadas · YYYY-MM-DD" + cada fuente como enlace
+  (✓ verificada / ! no verificada) + cuántas páginas no se pudieron
+  leer. Sin modelo (extractiva) no hay línea de modelo, como en el
+  chat normal. Sin API: "No pude investigar. La API de JESLY no
+  responde…" como mensaje de JESLY, sin romper la interfaz.
+- Ajustes → JESLY: "JESLY — Cuentas conectadas" y "JESLY — Resumen
+  diario" tras "JESLY — Recordatorios". Con la API apagada las dos
+  secciones muestran el motivo, sin errores; el resumen programado
+  no muestra hora (no hay workflow en la lista).
+
+### 18.4 Inventario de pills de Coucou en el fork (para decidir con JC)
+
+Fuente única: `PillCatalog.all` (`CoucouKit/PillCatalog.swift`), 33
+pills. No se borró ninguna en esta sesión: la decisión es de JC.
+"Equivalente JESLY" es lo que la isla actual ya tiene (su propio
+`PillCatalog.swift` en `apps/island`). Las pills de servicio de
+Coucou se alimentan por n8n: sin feed configurado no muestran nada.
+
+| Pill | Qué hace | Equivalente JESLY | Recomendación |
+|---|---|---|---|
+| VS Code (`integration_claude`) | Vigila sesiones de Claude Code en VS Code | No (JESLY no vigila terminales) | Quedarse solo si JC usa Claude Code en VS Code |
+| Cursor (`agent_cursor`) | Vigila sesiones de Cursor | No | Quedarse solo si JC usa Cursor |
+| Antigravity (`agent_antigravity`) | Vigila sesiones de Antigravity | No | Quitar (JC no lo usa) |
+| Codex (`agent_codex`) | Vigila sesiones de Codex | No | Quedarse solo si JC usa Codex |
+| Gemini CLI (`agent_gemini`) | Vigila sesiones de Gemini CLI | No | Quedarse solo si JC lo usa |
+| Copilot CLI (`agent_copilot`) | Vigila sesiones de Copilot | No | Quitar |
+| Muse Code (`agent_muse`) | Vigila sesiones de Muse | No | Quitar |
+| OpenCode (`agent_opencode`) | Vigila sesiones de OpenCode | No | Quitar |
+| Amp (`agent_amp`) | Vigila sesiones de Amp | No | Quitar |
+| Hermes (`agent_hermes`) | Vigila sesiones de Hermes | No | Quitar |
+| Claude Desktop (`agent_claude-desktop`) | Sesiones de la app Claude Desktop | No (el cerebro de JESLY es FreeLLMAPI/Ollama/Groq/Gemini/OpenRouter por la API) | Quitar |
+| JESLY (`jesly_propuestas`) | Propuestas esperando aprobación | Sí, es JESLY | **Quedarse** |
+| JESLY Voz (`jesly_voz`) | Estado "Oye JESLY" + micrófono | Sí, es JESLY | **Quedarse** |
+| Anthropic (`ai_anthropic`) | Chat directo con Anthropic | Sí: JESLY Chat (router por la API) | Quitar (el cerebro ya cubre; evita llaves que JESLY no necesita) |
+| Google AI (`ai_google`) | Chat directo con Google AI | Sí: JESLY Chat (Gemini entra por el router) | Quitar |
+| OpenAI (`ai_openai`) | Chat directo con OpenAI | Sí: JESLY Chat | Quitar |
+| Ollama (`ai_ollama`) | Chat directo con Ollama local | Sí: JESLY Chat (ollama-local es proveedor del router) | Quitar |
+| LM Studio (`ai_lmstudio`) | Chat directo con LM Studio | Sí: JESLY Chat | Quitar |
+| JESLY Chat (`jesly_chat`) | Chat con JESLY por la API | Sí, es JESLY | **Quedarse** |
+| Resend (`integration_resend`) | Email transaccional | No | Quitar (JC no lo usa; la API no lo expone) |
+| n8n (`integration_n8n`) | Estado de n8n | No | Quitar, salvo que quede alguna pill alimentada por n8n |
+| Vercel (`integration_vercel`) | Estado de deploys en Vercel | No (la isla lo tiene "próximamente") | Quedarse solo si se cablea el feed de n8n; si no, es adorno |
+| GitHub (`integration_github`) | Estado de GitHub | Parcial: cuentas conectadas (PRs y build por la API) | Quedarse solo si se cablea el feed; el resto ya lo da Cuentas conectadas |
+| Notion (`integration_notion`) | Estado de Notion | No | Quitar |
+| Cal.com (`integration_calcom`) | Estado de Cal.com | No | Quitar |
+| Stripe (`integration_stripe`) | Estado de Stripe | No | Quitar |
+| Apple Music (`integration_music`) | Música en la isla (Mochi bailaba) | No (la nube no baila ni suena) | Quitar |
+| Spotify (`integration_spotify`) | Música en la isla | No | Quitar |
+| Mail (`integration_mail`) | Agente de correo (buscar, leer, responder, reglas) | Parcial: cuentas conectadas leen Gmail | Quitar por ahora: responder y reglas duplican lo que JESLY ya lee por la API y piden su propia configuración; se revisita si JC quiere responder correo desde la isla |
+| WhatsApp (`integration_whatsapp`) | WhatsApp en la isla (gateway GOWA local) | No (la isla lo tiene "próximamente — bot §16") | Quitar (pide un gateway local que JC no corre) |
+| Crypto (`integration_crypto`) | Portfolio cripto | No | Quitar |
+| Coucoudoro (`integration_coucoudoro`) | Temporizador trabajo/descanso local | No | Quitar (extra local sin coste, pero fuera del producto) |
+| Portfolio (`integration_portfolio`) | Portfolio de inversiones | No | Quitar |
+
+Resumen del inventario: quedarse 3 incondicionales (las de JESLY) +
+6 condicionales (VS Code, Cursor, Codex, Gemini CLI si JC los usa;
+GitHub y Vercel si se cablea su feed) + quitar 24. Las pills de
+agente solo muestran sesiones si los hooks están instalados, y eso
+es Fase 6 (conflicto de hooks: solo una app dueña de
+`~/.claude/settings.json`).
+
+**No son pills** (features aparte, no están en `PillCatalog`):
+
+- **Flow** (Dictado, Notetaker, Estadísticas, Diccionario,
+  Fragmentos, Estilos): páginas del Flow window. Dictado:
+  quedarse (dictar en cualquier app, offline con Parakeet; distinto
+  del modo voz de JESLY, que es chat por voz). Notetaker: decidir
+  con JC (graba llamadas, pide micro). El resto son utilidades
+  locales sin coste: quedarse.
+- **Modo demo** (`DemoEngine`): recorrido guionado, nada en disco.
+  Quitar del producto final (JC ya conoce la app); útil solo para
+  enseñarla.
+- **Resumen semanal** (lunes, imagen para compartir): no se porta;
+  lo sustituye el resumen diario de JESLY (esta sesión).
+
+### 18.5 Verificación sin compilar (hecha)
+
+- Balance llaves/paréntesis/corchetes 0 (escáner Swift-aware con
+  interpolación) en los 7 archivos nuevos/tocados.
+- Cada endpoint usado existe en el servidor y está montado
+  (`apps/api/src/index.ts`: digest :153, investigar :158, cuentas
+  :160); las formas de respuesta se verificaron contra
+  `routes/investigar.ts`, `routes/cuentas.ts`, `routes/digest.ts`,
+  `research/deep-research.ts` y `accounts/store.ts`.
+- Sin colisión de nombres (todos los tipos `Jesly*` nuevos aparecen
+  solo en definición + uso; `researchButton`, `sendResearch`,
+  `digestHour` sin choques con Coucou).
+- `project.yml` sin tocar en esta sesión. **No afirmo que compile**
+  — solo la Mac lo confirma. Sospechosos si falla:
+  `Views/JeslyChatView.swift` (enlaces de fuentes, botón de
+  investigar) o `Views/JeslyWorkflowsSkillsViews.swift` (vistas
+  nuevas de cuentas y resumen).
+
+### 18.6 Riesgos y límites conocidos
+
+- La investigación tarda: varias búsquedas + descarga de páginas;
+  la vista lo dice mientras espera, pero no hay cancelación (el
+  `POST` sigue hasta responder o fallar).
+- Preguntas de más de 1000 caracteres fallan con 400 del servidor;
+  la vista no recorta ni avisa antes de enviar.
+- El resumen diario se refresca cada 15 s con el resto de Ajustes
+  → JESLY; es una consulta barata a Postgres, no un agente.
+- Conectar una cuenta (OAuth de Google, token de GitHub) sigue sin
+  UI: es trabajo de servidor, no de esta sesión.
+- La decisión de pills NO se tomó: el inventario es propuesta, JC
+  decide qué se quita y eso es la sesión 3 (o parte de ella).
+
+### 18.7 Para la Fase 5, sesión 3
+
+Aplicar la decisión de pills de JC (quitar las que diga, con sus
+borrados y su verificación); conectar cuentas desde la isla si JC
+lo pide (OAuth Google / token GitHub); resto del mapa F si queda
+algo; y Fase 6 (verificación en vivo + conflicto de hooks).

@@ -19,18 +19,23 @@ public struct JeslyChatMessage: Identifiable, Equatable {
     /// Insignia de visión ("Vio: proveedor / modelo"), solo cuando
     /// la respuesta trae `vision` (ojos, Fase 4, sesión 3).
     public var visionBadge: String?
+    /// Informe de investigación profunda, solo cuando la respuesta
+    /// vino de `POST /v1/investigar` (Fase 5, sesión 2): la vista
+    /// muestra sus fuentes como enlaces.
+    public var research: JeslyResearchResult?
 
     public enum Role: String, Equatable {
         case user
         case jesly
     }
 
-    public init(role: Role, text: String, provider: String? = nil, model: String? = nil, visionBadge: String? = nil) {
+    public init(role: Role, text: String, provider: String? = nil, model: String? = nil, visionBadge: String? = nil, research: JeslyResearchResult? = nil) {
         self.role = role
         self.text = text
         self.provider = provider
         self.model = model
         self.visionBadge = visionBadge
+        self.research = research
     }
 }
 
@@ -69,11 +74,23 @@ final class JeslyChatStore: ObservableObject {
     @Published private(set) var apiReachable: Bool = false
     /// Motivo del último fallo al enviar, nil cuando fue bien.
     @Published private(set) var lastError: String?
+    /// Modo investigar (Fase 5, sesión 2): el envío va por
+    /// `POST /v1/investigar` en vez de por el chat. No persiste:
+    /// al arrancar, el chat es chat.
+    @Published var researchMode: Bool = false
+    /// true mientras una investigación está en vuelo (tarda más
+    /// que un chat normal: varias búsquedas + descarga de páginas).
+    @Published private(set) var researching: Bool = false
 
     private let providerKey = "com.jesly.island.chatProvider"
 
     private init() {
         self.selectedProvider = UserDefaults.standard.string(forKey: providerKey)
+    }
+
+    /// Activa o apaga el modo investigar.
+    func toggleResearchMode() {
+        researchMode.toggle()
     }
 
     /// Etiqueta del chip de proveedor, igual que la isla actual:
@@ -137,6 +154,42 @@ final class JeslyChatStore: ObservableObject {
         guard !heard.isEmpty, !reply.isEmpty else { return }
         messages.append(JeslyChatMessage(role: .user, text: heard))
         messages.append(JeslyChatMessage(role: .jesly, text: reply, provider: selectedProvider))
+    }
+
+    /// Investiga en la web y añade el informe al historial
+    /// (Fase 5, sesión 2). `POST /v1/investigar` con el proveedor
+    /// elegido (nil = Automático). La respuesta trae el informe en
+    /// formato fijo con sus fuentes; el mensaje guarda el informe
+    /// entero para que la vista muestre las fuentes como enlaces.
+    /// Tarda más que un chat normal (varias búsquedas + descarga
+    /// de páginas): `researching` lo dice en la vista mientras
+    /// espera. Sin API o sin web, el mensaje de error claro de la
+    /// isla, nunca una respuesta inventada.
+    func sendResearch(_ text: String) async {
+        let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !sending, !query.isEmpty else { return }
+        sending = true
+        researching = true
+        defer { sending = false; researching = false }
+        messages.append(JeslyChatMessage(role: .user, text: query))
+        do {
+            let client = JeslyAPIClient()
+            let result = try await client.investigate(pregunta: query, provider: selectedProvider)
+            apiReachable = true
+            lastError = nil
+            messages.append(JeslyChatMessage(
+                role: .jesly, text: result.respuesta,
+                provider: result.provider, model: result.model,
+                research: result
+            ))
+        } catch {
+            apiReachable = false
+            lastError = error.localizedDescription
+            messages.append(JeslyChatMessage(
+                role: .jesly,
+                text: "No pude investigar. \(error.localizedDescription)"
+            ))
+        }
     }
 
     /// Limpia el historial de esta sesión.

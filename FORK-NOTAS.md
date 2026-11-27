@@ -814,3 +814,86 @@ título "JESLY", símbolo `cloud.fill`) + color hueso `#E8E0D0` en
 compila). El `default:` de la vista de página ya renderiza
 `SettingsView(embeddedSection: "jesly")`. Ahora la fila JESLY aparece en el
 menú NOTCH del Flow window, entre Agentes y Chat.
+
+## FASE 5, SESIÓN 2 — Investigación profunda, cuentas conectadas, resumen diario
+
+### 1. Archivos nuevos/cambiados (7, sin push)
+
+- `Api/JeslyModels.swift`: `JeslyResearchSource`, `JeslyFailedPage`,
+  `JeslyResearchResult`, `JeslyConnectedAccount`, `JeslyDailyDigest`,
+  `JeslyDigestWorkflowToday`, `JeslyDigestScheduleResponse`.
+- `Api/JeslyAPIClient.swift`: `investigate(pregunta:provider:)`,
+  `connectedAccounts()`, `dailyDigest()`, `scheduleDailyDigest(hour:)`,
+  `deleteDailyDigest()`.
+- `JeslyChatStore.swift`: modo investigar (`researchMode`,
+  `researching`, `toggleResearchMode()`, `sendResearch(_:)`); el
+  mensaje guarda el informe (`JeslyChatMessage.research`).
+- `Views/JeslyChatView.swift`: botón de lupa junto al micrófono,
+  indicador "Investigando en la web…", fuentes como enlaces con su
+  fecha y verificación.
+- `JeslyWorkflowsStore.swift`: `accounts`, `dailyDigest`,
+  `digestHour` + refrescos en el sondeo de 15 s; acciones
+  `scheduleDailyDigest(hour:)` / `deleteDailyDigest()`.
+- `Views/JeslyWorkflowsSkillsViews.swift`: `JeslyAccountsView`,
+  `JeslyDailyDigestView`.
+- `App/SettingsView.swift`: GroupBox "JESLY — Cuentas conectadas" y
+  "JESLY — Resumen diario" tras "JESLY — Recordatorios".
+- Docs: `README-FASE2.md` §18 (con el inventario completo de pills)
+  y esta sección.
+
+### 2. Endpoints (todos existen y están montados, con evidencia)
+
+`apps/api/src/index.ts`: digest :153, investigar :158, cuentas :160.
+- `POST /v1/investigar { pregunta, provider? }` → 200 `{ respuesta,
+  fuentes, fechaConsulta, consultas, paginasFallidas, fuente,
+  provider?, model? }`; 400 sin pregunta o >1000 caracteres; 503 sin
+  web. `fuente` "modelo" o "extractiva". `MAX_PAGES = 8`.
+- `GET /v1/cuentas` → `{ cuentas }` (PublicAccount, sin tokens).
+  Solo lectura: conectar/desconectar existen en el servidor pero no
+  se cablean aquí (OAuth con redirect / token fine-grained).
+- `GET /v1/resumen-diario` (vista previa), `POST /v1/resumen-diario
+  { hora }` → 201/200 (crea o actualiza el workflow "Resumen diario
+  — buenos días"), `DELETE /v1/resumen-diario` (apagar, 404 si no hay
+  ninguno). La hora del resumen se deriva del workflow programado
+  (cron `M H * * *`), nunca se inventa.
+
+### 3. Hallazgos
+
+- La isla actual NO tiene botón de investigar ni vista de cuentas ni
+  de resumen: su agente investiga con la herramienta interna, su
+  pill "Correo" es "Próximamente — cuentas conectadas (§11)" y el
+  resumen llega por chat/push. Todo lo de esta sesión es UI nueva
+  en el fork sobre endpoints que ya existían.
+- El resumen programado ES un workflow: se ve en la lista de
+  workflows con su horario.
+- La investigación no se puede cancelar en vuelo; preguntas de más
+  de 1000 caracteres fallan con 400 del servidor.
+
+### 4. Inventario de pills (resumen; la tabla completa está en README-FASE2.md §18.4)
+
+33 pills en `PillCatalog.all`. Recomendación: quedarse 3
+incondicionales (jesly_propuestas, jesly_voz, jesly_chat) + 6
+condicionales (VS Code, Cursor, Codex, Gemini CLI si JC los usa;
+GitHub y Vercel si se cablea su feed de n8n) + quitar 24 (el resto
+de agentes CLI, los 5 chats directos de Coucou, Resend/n8n/Notion/
+Cal.com/Stripe, música, Mail, WhatsApp, Crypto, Coucoudoro,
+Portfolio). No son pills: Flow (Dictado quedarse, Notetaker a
+decidir), modo demo (quitar del producto final), resumen semanal
+(no se porta: lo sustituye el resumen diario). **Nada borrado en
+esta sesión: JC decide.**
+
+### 5. Verificación sin compilar (hecha)
+
+Balance 0 en los 7 archivos (escáner Swift-aware); cada endpoint
+existe en el servidor y está montado; formas de respuesta
+verificadas contra las rutas y los tipos TS; sin colisión de
+nombres. `project.yml` sin tocar. **Sin compilar: solo la Mac lo
+confirma.** Sospechosos: `JeslyChatView.swift` o
+`JeslyWorkflowsSkillsViews.swift`.
+
+### 6. Para la Fase 5, sesión 3
+
+Aplicar la decisión de pills de JC (quitar las que diga, con sus
+borrados y verificación); conectar cuentas desde la isla si JC lo
+pide; resto del mapa F si queda algo; luego Fase 6 (verificación en
+vivo + conflicto de hooks).

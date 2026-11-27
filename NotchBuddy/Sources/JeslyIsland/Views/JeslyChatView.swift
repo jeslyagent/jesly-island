@@ -125,6 +125,39 @@ struct JeslyChatView: View {
                                                 .font(.system(size: 11))
                                                 .foregroundStyle(Color(hex: "#8E939C"))
                                         }
+                                        // Fuentes de la investigación
+                                        // profunda (Fase 5, sesión 2):
+                                        // la respuesta ya trae el
+                                        // informe en formato fijo; aquí
+                                        // las fuentes son enlaces que
+                                        // se pueden abrir, con su fecha
+                                        // y si se verificó o no.
+                                        if message.role == .jesly,
+                                           let research = message.research {
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                Text("Investigación · \(research.fuente) · \(research.sourcesSummary) · \(research.consultationDay)")
+                                                    .font(.system(size: 11))
+                                                    .foregroundStyle(Color(hex: "#8E939C"))
+                                                ForEach(Array(research.fuentes.enumerated()), id: \.offset) { _, source in
+                                                    if let url = URL(string: source.url) {
+                                                        Link(destination: url) {
+                                                            HStack(spacing: 4) {
+                                                                Image(systemName: source.verificada ? "checkmark.circle" : "exclamationmark.circle")
+                                                                    .font(.system(size: 10))
+                                                                Text("\(source.titulo) — \(source.fecha)")
+                                                                    .font(.system(size: 11))
+                                                            }
+                                                            .foregroundStyle(Color(hex: "#8AB4F8"))
+                                                        }
+                                                    }
+                                                }
+                                                if !research.paginasFallidas.isEmpty {
+                                                    Text("\(research.paginasFallidas.count) página\(research.paginasFallidas.count == 1 ? "" : "s") no se \(research.paginasFallidas.count == 1 ? "pudo leer" : "pudieron leer") y \(research.paginasFallidas.count == 1 ? "quedó" : "quedaron") sin verificar.")
+                                                        .font(.system(size: 11))
+                                                        .foregroundStyle(Color(hex: "#8E939C"))
+                                                }
+                                            }
+                                        }
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(8)
@@ -194,14 +227,26 @@ struct JeslyChatView: View {
                         .padding(.horizontal, 10)
                 }
 
+                // Estado de la investigación profunda, cuando está
+                // en vuelo: tarda más que un chat normal (varias
+                // búsquedas + descarga de páginas).
+                if store.researching {
+                    Text("Investigando en la web… puede tardar unos segundos.")
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Color(hex: "#8E939C"))
+                        .padding(.horizontal, 10)
+                }
+
                 // Fila de entrada, como `PromptView`.
                 HStack(spacing: 8) {
-                    TextField(store.messages.isEmpty ? "Pregúntale algo a JESLY…" : "Continúa…", text: $text)
+                    TextField(store.researchMode ? "Investiga en la web…" : (store.messages.isEmpty ? "Pregúntale algo a JESLY…" : "Continúa…"), text: $text)
                         .textFieldStyle(.plain)
                         .font(.system(size: 13))
                         .focused($focused)
                         .writingToolsBehavior(.disabled)
                         .onSubmit { sendMessage() }
+
+                    researchButton
 
                     micButton
 
@@ -241,6 +286,14 @@ struct JeslyChatView: View {
         let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty || !pendingAttachments.isEmpty, !store.sending else { return }
         text = ""
+        // Modo investigar (Fase 5, sesión 2): sin adjuntos, el
+        // envío va por `POST /v1/investigar` en vez de por el chat.
+        // Con adjuntos no hay investigación: cae al chat normal.
+        if store.researchMode, pendingAttachments.isEmpty {
+            dropNotice = nil
+            Task { await store.sendResearch(query) }
+            return
+        }
         let attachments = pendingAttachments.map { file in
             ChatAttachment(kind: file.kind, mediaType: file.mediaType, data: file.data.base64EncodedString())
         }
@@ -334,6 +387,29 @@ struct JeslyChatView: View {
                 dropNotice = nil
             }
         }
+    }
+
+    // MARK: - Investigación profunda (Fase 5, sesión 2)
+
+    /// Botón de investigación: activa el modo investigar; el envío
+    /// va por `POST /v1/investigar` en vez de por el chat. La isla
+    /// actual no tiene este botón: su agente investiga con la
+    /// herramienta interna (`investigar_profundo`); aquí la
+    /// investigación se pide explícita desde el chat y el informe
+    /// llega con sus fuentes.
+    private var researchButton: some View {
+        Button(action: { store.toggleResearchMode() }) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 14))
+                .foregroundStyle(store.researchMode ? Color(hex: "#0B0C0E") : Color(hex: "#F5F6F8"))
+                .frame(width: 32, height: 32)
+                .background(store.researchMode ? Color(hex: "#E8E0D0") : Color.white.opacity(0.07))
+                .clipShape(Circle())
+                .overlay(Circle().stroke(store.researchMode ? Color(hex: "#E8E0D0") : Color.white.opacity(0.22), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(store.sending)
+        .help(store.researchMode ? "Investigando en la web: toca para volver al chat" : "Investigar en la web (con fuentes)")
     }
 
     // MARK: - Voz (micrófono manual)

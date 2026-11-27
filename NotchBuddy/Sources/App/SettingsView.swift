@@ -771,6 +771,38 @@ struct SettingsView: View {
             .padding(6)
         }
             .settingsAnchor("jesly.reminders")
+
+        // MARK: - JESLY cuentas conectadas y resumen diario (Fase 5, sesión 2)
+
+        /// Solo lectura y estado, como en la isla actual (que no
+        /// tiene vista de cuentas ni de resumen: llegan por chat).
+        /// Con la API apagada las dos listas quedan vacías y se
+        /// muestra el motivo, sin errores.
+        GroupBox("JESLY — Cuentas conectadas") {
+            VStack(alignment: .leading, spacing: 8) {
+                JeslyAccountsView(store: jeslyWorkflowsStore)
+                if !jeslyWorkflowsStore.apiReachable, let error = jeslyWorkflowsStore.lastError {
+                    Text(error)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(6)
+        }
+            .settingsAnchor("jesly.accounts")
+
+        GroupBox("JESLY — Resumen diario") {
+            VStack(alignment: .leading, spacing: 8) {
+                JeslyDailyDigestView(store: jeslyWorkflowsStore)
+                if !jeslyWorkflowsStore.apiReachable, let error = jeslyWorkflowsStore.lastError {
+                    Text(error)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(6)
+        }
+            .settingsAnchor("jesly.digest")
     }
 
     // MARK: - Agents section
