@@ -6,13 +6,13 @@ import SwiftUI
 /// The pages of the Coucou window: Flow (the dictation, the Notetaker) and the notch's settings.
 enum HubPage: String, CaseIterable, Identifiable {
     case dictation, notes, insights, dictionary, snippets, styles, settings
-    case room, general, pills, agents, chat, integrations, voice, shortcuts
+    case room, general, pills, agents, jesly, chat, integrations, voice, shortcuts
     case mailOverview, mailRules, mailBanned, mailVIP
 
     var id: String { rawValue }
 
     static let flowPages: [HubPage] = [.dictation, .notes, .insights, .dictionary, .snippets, .styles, .settings]
-    static let notchPages: [HubPage] = [.room, .general, .pills, .agents, .chat, .integrations, .voice, .shortcuts]
+    static let notchPages: [HubPage] = [.room, .general, .pills, .agents, .jesly, .chat, .integrations, .voice, .shortcuts]
     static let mailPages: [HubPage] = [.mailOverview, .mailRules, .mailBanned, .mailVIP]
 
     /// The section of Settings this page shows, for the notch's pages.
@@ -21,6 +21,7 @@ enum HubPage: String, CaseIterable, Identifiable {
         case .general:      return "general"
         case .pills:        return "activepills"
         case .agents:       return "agents"
+        case .jesly:        return "jesly"
         case .chat:         return "chat"
         case .integrations: return "integrations"
         case .voice:        return "voice"
@@ -40,6 +41,7 @@ enum HubPage: String, CaseIterable, Identifiable {
         case .general:      return String(localized: "General")
         case .pills:        return String(localized: "Active pills")
         case .agents:       return String(localized: "Agents")
+        case .jesly:        return "JESLY"
         case .chat:         return String(localized: "Chat")
         case .integrations: return String(localized: "Integrations")
         case .voice:        return String(localized: "Voice")
@@ -71,6 +73,7 @@ enum HubPage: String, CaseIterable, Identifiable {
         case .general:      return "gearshape"
         case .pills:        return "square.grid.2x2"
         case .agents:       return "terminal"
+        case .jesly:        return "cloud.fill"
         case .chat:         return "bubble.left.and.bubble.right"
         case .integrations: return "puzzlepiece.extension"
         case .voice:        return "waveform"

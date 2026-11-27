@@ -83,6 +83,7 @@ struct HubHeroTheme {
         case .general: return .init(color: Color(hex: "#8E939C"))
         case .pills: return .init(color: Color(hex: "#F5A524"))
         case .agents: return .init(color: Color(hex: "#3B9EFF"))
+        case .jesly: return .init(color: Color(hex: "#E8E0D0"))
         case .chat: return .init(color: Color(hex: "#E07950"))
         case .integrations: return .init(color: Color(hex: "#7C5CFF"))
         case .voice: return .init(color: Color(hex: "#F97316"))

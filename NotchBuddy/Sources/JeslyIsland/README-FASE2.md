@@ -1100,6 +1100,14 @@ semanal).
   la isla no tiene vista propia de recordatorios, llegan por chat).
 - Ajustes → JESLY: tres GroupBox nuevos (Workflows, Habilidades, Recordatorios) tras
   las reglas "Siempre". Arranque en `AppDelegate.setupIsland`.
+- **Corrección tras la verificación de JC (2026-11-27 19:01 AST):** la fila JESLY
+  solo existía en la ventana de Ajustes suelta; en el Flow window (`FlowHub`),
+  que es el que JC usa, `HubPage` no tenía caso `jesly` y la sección era
+  inalcanzable. Se añadió el caso `jesly` (`FlowHub.swift`: enum, `notchPages`
+  tras `.agents`, `settingsSection` → "jesly", título "JESLY", `cloud.fill`) y
+  su color hueso `#E8E0D0` en `HubHeroTheme.of` (`FlowHubMochis.swift`, switch
+  exhaustivo). La fila JESLY aparece ahora en el menú NOTCH del Flow window,
+  entre Agentes y Chat.
 
 ### 17.2 Endpoints (todos existen, con evidencia)
 

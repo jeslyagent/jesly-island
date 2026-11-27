@@ -800,3 +800,17 @@ Decidir con JC qué pills de Coucou quedan (Flow, Mail, música, WhatsApp, demo,
 semanal) y quitar o dejar las demás; investigación profunda (`POST /v1/investigar`) y
 cuentas conectadas; resumen diario. Riesgos: el run tarda un sondeo en verse como
 tarea en curso; sin instalar habilidades desde manifiesto.
+
+### 5. Corrección tras la verificación de JC (2026-11-27 19:01 AST)
+
+JC compiló bien pero no veía las secciones en la ventana que él usa. Causa real:
+la fila JESLY solo existía en la ventana de Ajustes suelta (`SettingsView`); la
+ventana que JC usa es el Flow window (`FlowHub`), cuyo menú NO tenía caso `jesly`
+en `HubPage`, así que la sección era inalcanzable desde ahí (su `forSettings`
+caía en `.general`). Corrección: caso `jesly` nuevo en `HubPage`
+(`FlowHub.swift`: enum, `notchPages` tras `.agents`, `settingsSection` → "jesly",
+título "JESLY", símbolo `cloud.fill`) + color hueso `#E8E0D0` en
+`HubHeroTheme.of` (`FlowHubMochis.swift`, switch exhaustivo — sin ese caso no
+compila). El `default:` de la vista de página ya renderiza
+`SettingsView(embeddedSection: "jesly")`. Ahora la fila JESLY aparece en el
+menú NOTCH del Flow window, entre Agentes y Chat.
