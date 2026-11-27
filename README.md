@@ -1,8 +1,10 @@
 <div align="center">
 
-<img src="NotchBuddy/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="96" alt="Coucou icon">
+<img src="NotchBuddy/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="96" alt="Coucou icon — PENDIENTE: reemplazar por icono propio de JESLY">
 
-# Coucou
+# JESLY Island — fork de Coucou
+
+> **FORK EN FASE 1 (base limpia, sin publicar).** Origen: `Louis-CFM/coucou` v0.6.2, commit `202082ee`, código MIT. Nombre, personaje Mochi, icono y sonidos son © Louis Raillé (`LICENSE-ASSETS.md`) y deben reemplazarse antes de distribuir nada. Este fork aún muestra textos e imágenes de Coucou en el resto del README y del código: ver `FORK-NOTAS.md`. Todavía NO es JESLY: la integración con la API de JESLY está en `~/workspace/jarvis/COUCOU-FORK-PLAN.md` y aún no está hecha.
 
 **A tiny friend that lives in your Mac's notch — or at the top of your screen on Windows and Linux — and keeps an eye on your AI coding agent sessions. And now on your phone too: iPhone and Android.**
 

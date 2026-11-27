@@ -138,7 +138,7 @@ targets:
       path: Resources/Info.plist
       properties:
         CFBundleName: Coucou
-        CFBundleDisplayName: Coucou
+        CFBundleDisplayName: JESLY
         CFBundleIdentifier: fr.louisraille.NotchBuddy
         CFBundleVersion: "28"
         CFBundleShortVersionString: "0.6.2"
