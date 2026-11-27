@@ -1,4 +1,4 @@
-# README-FASE2 — JESLY Island, Fase 2 sesiones 1–2
+# README-FASE2 — JESLY Island, Fase 2 sesiones 1–4
 
 Fecha: 2026-11-27. Estado: **sesión 1 pusheada y VERIFICADA EN VIVO en la Mac de JC
 (commit `55708958`, BUILD SUCCEEDED 12:28 AST, app abre desde Aplicaciones y queda
@@ -320,3 +320,81 @@ Archivos que cambiarían en el mismo lote:
 
 Sin esas tres respuestas no se toca nada de §8.1–8.2: renombrar el producto
 sin su identidad de firmado rompe el build en la nube y la notarización.
+
+## 9. Sesión 4 — hecho 2026-11-27 (local, SIN pushear, SIN compilar)
+
+Bug de JC en vivo (sesión 3 verificada, PID 10835): la nube **se ve cortada
+en el notch plegado hasta abrir la isla**, y la app queda en **~45 % de CPU
+en reposo**.
+
+### 9.1 Geometría del notch plegado, medida en código (no adivinada)
+
+- `IslandConst.notchHeight = 32` (fallback; en la Mac de JC es el
+  `safeAreaTop` real, 32–36 pt), `notchWidth` fallback 184
+  (`IslandTypes.swift:241-242`, `IslandScreenGeometry.swift`).
+- `islandSize(.compact)` = `(nw + 160, nh)` = **(344, 32)**; `islandSize(.hidden)`
+  = `(nw, nh)` = (184, 32) (`IslandWindowController.swift:2243`).
+- `botPosition(.compact)` = (40, 16, diámetro 20, opacidad 1):
+  `IslandRestingLayout.botDiameter = min(20, height − 6)`,
+  `botCenterY = height / 2` (`IslandScreenGeometry.swift:34-40`).
+- `BotPlacement`: `canvasSize = diámetro / 0.6 = 33,3`; frame de
+  33,3 × (33,3 + 40 overhang) = 73,3, posicionado en
+  `(40, 16 − 20 = −4)` en coords de la isla; `IslandContainer` enmascara
+  `BotPlacement` a la altura de la isla (32 pt en plegada).
+- **Cómo evitaba Mochi cortarse:** `BotEngine.draw` centra el cuerpo en
+  `cy = H/2 + particleOverhang/2 + oy*R + R*0.06` (`BotEngine.swift:1117`)
+  = 36,65 + 20 = 56,65 en coords del canvas → y ≈ 16 en la isla, centro
+  exacto de la tira, cuerpo de 20 pt entre y 6–26, entero visible.
+- **Por qué se cortaba la nube (sesión 3):** `BotCanvasView` centraba el
+  cuadrado de 33,3 de `SmokeCloudView` en el frame de 73,3 → centro de la
+  nube en y ≈ −4 en la isla; la nube mide ~24,4 pt de alto, así que
+  ocupaba y ≈ −18…+7 y la máscara de 32 pt solo dejaba ver de 0 a ~7:
+  el tercio de abajo. Al abrir, la isla mide 160 pt y no hay corte —
+  exacto lo que JC describió ("cortado hasta que lo abro").
+
+### 9.2 Arreglo (2 archivos, sin tocar `SmokeCharacter`)
+
+- `BotCanvasView.swift`: la nube va **alineada ABAJO** del frame
+  (`alignment: .bottom`), no al centro. Es la misma compensación de
+  BotEngine con otra forma: centro = H − size/2 = size/2 + overhang, que
+  es idéntico a H/2 + overhang/2. Con overhang 40: centro en y = 16, la
+  nube (2,4–26,8) cabe entera en la tira de 32 pt. En expandida da el
+  mismo centro que Mochi (`cy`), así que la vista abierta no cambia.
+  La demostración vale para cualquier `nh` (16 → height/2), no solo 32.
+  Ramas sin overhang (subida, `GhostBotView` cuadrado) no cambian:
+  abajo = centro ahí.
+- `SmokeCloudView.swift`: parámetro nuevo `compact: Bool = false`.
+  Plegada corre a **30 fps** (`minimumInterval 0.9/30`, como
+  `MochiFrameClock.interval`); abierta a 60 fps. `BotCanvasView` pasa
+  `compact: state.mode != .expanded`; `MiniBotCanvasView` pasa
+  `compact: true` siempre (las minis de Mochi eran 30 fps,
+  `MochiFrameClock.miniFPS`). `DesktopMochi` (120 pt) y `FlowHubMochis`
+  quedan a 60 fps: son vistas visibles, no el problema.
+- `BotCanvasView` además **no anima cuando está oculta en el notch**:
+  si `mode == .hidden` y no es esquina ni arrastre (`isDraggingBot`),
+  devuelve `Color.clear` (BotPlacement ya la pone a opacidad 0).
+  Excepciones a propósito: la baldosa en esquina (ahí `hidden` sí se
+  ve) y el fantasma de arrastre `GhostBotView`.
+- `paused` se sigue respetando (ya devolvía `Color.clear`).
+- No se tocó `SmokeCharacter` (matemática), ni bundle id, entitlements,
+  `HookServer`, `project.yml`, ni la isla actual de `Jesly-agent-ai`.
+
+### 9.3 FPS por estado (después del arreglo)
+
+| Estado | FPS de la nube |
+|---|---|
+| Isla abierta (expanded) | 60 |
+| Isla plegada (compact / petit) | 30 |
+| Isla oculta en el notch (hidden) | 0 (sin animar) |
+| Baldosa en esquina (hidden, corner) | 30 |
+| Minis (pills, esquina) | 30 |
+| Flotante de escritorio, Flow Hub | 60 |
+
+### 9.4 Archivos cambiados en esta sesión (2 + docs)
+
+`SmokeCloudView.swift` (parámetro `compact`, intervalo 30/60),
+`BotCanvasView.swift` (alineación abajo, `compact` por modo, sin
+animar oculta, minis a 30). Balance 0 en los 2; `SmokeCloudView` tiene
+valor por defecto en el parámetro nuevo, así que `DesktopMochi` y
+`FlowHubMochis` compilan sin tocarse (verificado por grep).
+**Sin compilar: solo la Mac lo confirma.**

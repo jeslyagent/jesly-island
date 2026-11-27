@@ -12,6 +12,12 @@ import SwiftUI
 /// - respiración en espera, parpadeos, ojos que siguen el cursor,
 /// - saltito de alegría cuando `joySince` tiene valor (un agente
 ///   acaba de terminar).
+///
+/// `compact` (Fase 2, sesión 4): modo plegado — la isla cerrada y las
+/// minis corren a 30 fps, como Mochi (`MochiFrameClock.miniFPS` y
+/// `fps(open:)`); abierta corre a 60 fps. Sin `compact` el TimelineView
+/// corría a 60 fps siempre, también invisible, y eso dejaba la app en
+/// ~45 % de CPU en reposo en la Mac de JC.
 public struct SmokeCloudView: View {
     /// Tamaño de la nube en puntos (120 en el compañero flotante).
     public var size: CGFloat = 120
@@ -19,17 +25,22 @@ public struct SmokeCloudView: View {
     public var joySince: Date? = nil
     /// Estado de ánimo: la nube se inclina un poco al escuchar.
     public var listening: Bool = false
+    /// Plegada (isla cerrada o mini): 30 fps en vez de 60.
+    public var compact: Bool = false
 
     @State private var cursor: CGPoint = .zero
 
-    public init(size: CGFloat = 120, joySince: Date? = nil, listening: Bool = false) {
+    public init(size: CGFloat = 120, joySince: Date? = nil, listening: Bool = false, compact: Bool = false) {
         self.size = size
         self.joySince = joySince
         self.listening = listening
+        self.compact = compact
     }
 
     public var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
+        // Intervalo 10 % corto, como MochiFrameClock.interval: un
+        // intervalo exacto de 1/30 s se salta un frame de cada dos.
+        TimelineView(.animation(minimumInterval: compact ? 0.9 / 30.0 : 0.9 / 60.0)) { timeline in
             let now = timeline.date.timeIntervalSinceReferenceDate
             let breath = SmokeCharacter.breathScale(at: now)
             let openness = SmokeCharacter.eyeOpenness(at: now)

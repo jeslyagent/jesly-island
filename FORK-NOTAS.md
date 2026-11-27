@@ -312,3 +312,38 @@ del `.app`. Sin esas respuestas no se toca nada.
 (`setOutfit` no-op), `IslandViewContent.swift`, `AppState.swift`,
 `AndroidLink/AndroidLinkProtocol.swift`. Balance 0 en los 6; grep de lo
 quitado = 0. **Sin compilar: solo la Mac lo confirma.**
+
+## FASE 2, SESIÓN 4 — nube cortada en el notch + CPU (2026-11-27, local, SIN pushear, SIN compilar)
+
+Bug de JC en vivo: nube cortada en el notch plegado hasta abrir la isla,
+y ~45 % de CPU en reposo.
+
+### 1. Geometría medida (no adivinada)
+
+Isla plegada 344×32 pt (`notchHeight` 32 fallback, `notchWidth` 184).
+`BotPlacement`: canvas 33,3 × 73,3 (40 de overhang) en (40, −4);
+máscara de 32 pt. Mochi compensaba con `cy = H/2 + overhang/2` → y=16.
+La nube de la sesión 3 iba centrada → centro en y≈−4, solo se veía de
+0 a ~7 pt (el tercio de abajo). Al abrir (160 pt) no hay corte.
+
+### 2. Arreglo
+
+- `SmokeCloudView.swift`: parámetro `compact` — 30 fps plegada, 60
+  abierta (intervalo `0.9/fps`, como `MochiFrameClock`).
+- `BotCanvasView.swift`: nube alineada ABAJO del frame (misma
+  compensación que BotEngine: centro en y=16, nube 2,4–26,8 dentro de
+  la tira de 32); `compact` según `mode != .expanded`; minis a 30 fps;
+  oculta en notch no anima (`Color.clear`, salvo esquina y arrastre).
+- Sin tocar `SmokeCharacter`, bundle id, entitlements, `HookServer`,
+  `project.yml` ni la isla actual.
+
+### 3. FPS por estado
+
+Abierta 60, plegada 30, oculta en notch 0, baldosa en esquina 30,
+minis 30, flotante/Flow Hub 60.
+
+### 4. Archivos cambiados (2)
+
+`SmokeCloudView.swift`, `BotCanvasView.swift` (+ docs). Balance 0 en
+los 2; llamadores viejos (`DesktopMochi`, `FlowHubMochis`) intactos por
+el valor por defecto. **Sin compilar: solo la Mac lo confirma.**

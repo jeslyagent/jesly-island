@@ -14,15 +14,32 @@ struct BotCanvasView: View {
     var paused: Bool = false
 
     var body: some View {
-        if paused {
+        // Oculta en el notch: BotPlacement ya la pone a opacidad 0, así
+        // que no animar nada aquí (antes el TimelineView corría a 60 fps
+        // invisible). Excepciones, que sí se ven: la baldosa en esquina
+        // (ahí `hidden` muestra a Mochi solo, grande) y el fantasma de
+        // arrastre (GhostBotView, `isDraggingBot`).
+        if paused || (state.mode == .hidden && !state.islandPlacement.isCorner && !state.isDraggingBot) {
             Color.clear
         } else {
             GeometryReader { geo in
                 SmokeCloudView(
                     size: min(geo.size.width, geo.size.height),
-                    listening: state.voiceActive
+                    listening: state.voiceActive,
+                    // Plegada: 30 fps como Mochi; abierta: 60 fps.
+                    compact: state.mode != .expanded
                 )
-                .frame(width: geo.size.width, height: geo.size.height)
+                // Alineada ABAJO, no al centro: es la compensación que
+                // BotEngine hacía a mano (cy = H/2 + overhang/2).
+                // Centrada, la nube quedaba 20 pt demasiado alta y la
+                // máscara de 32 pt de la isla plegada le cortaba los 2/3
+                // de arriba (nube de y ≈ −18 a +7 en la isla, solo se
+                // veía de 0 a ~7). Abajo, su centro cae en y = 16, el
+                // centro exacto de la tira plegada (344×32), y la nube
+                // (24,4 pt de alto) cabe entera con margen (2,4–26,8).
+                // En expandida da lo mismo: el centro cae en cy igual
+                // que el de Mochi, así que la vista abierta no cambia.
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .bottom)
             }
         }
     }
@@ -31,13 +48,15 @@ struct BotCanvasView: View {
 /// Mini nube para las pills de agente y la esquina (antes mini Mochi).
 /// Mantiene la API (`task`, `isDancing`) para no tocar a sus llamadores;
 /// el color de la tarea se ignora: la nube es blanca por diseño.
+/// Compacta siempre: las minis de Mochi corrían a 30 fps
+/// (`MochiFrameClock.miniFPS`); la nube corría a 60.
 struct MiniBotCanvasView: View {
     let task: AgentTask
     var isDancing: Bool = false
 
     var body: some View {
         GeometryReader { geo in
-            SmokeCloudView(size: min(geo.size.width, geo.size.height))
+            SmokeCloudView(size: min(geo.size.width, geo.size.height), compact: true)
                 .frame(width: geo.size.width, height: geo.size.height)
         }
     }
