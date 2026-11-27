@@ -183,3 +183,140 @@ Medido 2026-11-27 (sin `.git`): `mochi` 3.939 ocurrencias en 400 archivos;
    instancia por defecto `"Coucou"` si el Mac no tiene nombre).
 
 ## 6. (antes §5) Sesión 2 — lista de trabajo original
+
+## 7. Sesión 3 — hecho 2026-11-27 (local, SIN pushear, SIN compilar)
+
+Sesión 2 verificada corriendo en la Mac de JC antes de empezar (13:20 AST,
+pull Fast-forward a `5cc5fd0`, menú y ventana dicen JESLY, nube en Flow Hub).
+
+### 7.1 Isla del notch → nube
+
+- `NotchBuddy/Sources/App/BotCanvasView.swift`: `BotCanvasView` y
+  `MiniBotCanvasView` ya no dibujan con `BotEngine`. Cuerpo nuevo:
+  `GeometryReader` + `SmokeCloudView(size: min(ancho, alto))`; en la isla
+  principal `listening: state.voiceActive` (sonríe al escuchar). API
+  intacta (`state`, `particleOverhang`, `lookOriginOverride`, `paused`) para
+  no tocar llamadores (`IslandRootView`, `IslandWindowController:1648`,
+  `CornerIsland`, `CoucoudoroViews`, `FlowPill`, `SpotifyViews`,
+  `IslandViewContent`). `paused` ahora devuelve `Color.clear` (antes no se
+  dibujaba nada mientras Mochi estaba en el escritorio).
+- Lo que se pierde con el cambio (sin equivalente en la nube): estados de
+  ánimo (`MochiMood`), baile con música, morph de subida, emotes
+  (slap/greet/blink/gulp/morph). La nube respira, parpadea y sigue el cursor.
+  Los minis ahora animan a 60 fps (`SmokeCloudView` lo lleva hardcodeado)
+  en vez de 30: vigilar CPU en la verificación en vivo.
+- `BotEngine` sigue en el árbol pero ya no dibuja la isla. Lo siguen usando:
+  escenas `HubMochiScene`/`HubHero`, `MochiStill`, `FlowHubRoom`, `FlowPill`.
+
+### 7.2 Flotante → nube
+
+- `NotchBuddy/Sources/App/DesktopMochi.swift`: `DesktopBotView` ahora es
+  `SmokeCloudView(size: 120, listening: appState.voiceActive)` con el mismo
+  hover scale 1.07. `engine: BotEngine` se mantiene como parámetro para no
+  tocar al controlador, que sigue creándolo y usándolo para emotes y sonidos
+  (`pop`/`peek`/`approve`): la nube no suena ni hace emotes, y el clic
+  simple ya no tiene "slap" visible (el `engine.slap()` sigue existiendo
+  pero no dibuja nada). Doble clic sigue volviendo a casa.
+  `viewState.paused` ya no pausa el dibujo (la nube anima sola).
+- Queda el nombre viejo en datos persistidos, a propósito: claves
+  `UserDefaults` `desktopMochiX` / `desktopMochiY` / `mochiOnDesktop`
+  (renombrarlas huérfana la posición guardada) y comentarios del controlador.
+
+### 7.3 Guardarropa: selector quitado, archivos NO borrados
+
+- `BotEngine.setOutfit` → **no-op**: fija `outfit = .none`,
+  `outfitPresence = 0` e ignora los argumentos. Firma intacta para que los
+  llamadores que quedan (`HubMochiScene`, controlador del flotante) sigan
+  compilando. `outfitTarget` queda como variable muerta (solo se declaraba).
+- `AppState`: quitados `mochiOutfitSelection`, `wardrobePreviewOutfit`,
+  `resolvedOutfit`, `_seasonalCache` y la línea de init
+  (`mochiOutfitSelection = Outfit.stored`). Grep después: **0 referencias**
+  en todo el árbol.
+- `IslandViewContent.swift`: `WardrobeView` es ahora un aviso ("JESLY no
+  tiene ropa: la nube es la nube." + botón Volver). Borrados
+  `OutfitPillView` y `drawOutfitIcon` (solo los usaba el grid). La ruta
+  `.wardrobe`, el atajo ⌃⌥G y los handlers de `IslandWindowController`
+  siguen y muestran el aviso.
+- ❌ **NO se borraron `MochiOutfitDrawing.swift`, `MochiWardrobe.swift`,
+  `tests/MochiWardrobeTests.swift` ni `scripts/test-wardrobe.sh`.**
+  La condición del encargo (grep 0 tras el no-op + quitar el selector) **NO
+  se cumple**: `Outfit` sigue referenciado en `FlowHubMochis.swift`
+  (`HubMochiSpec.outfit` + `setOutfit` en las escenas `HubHero`, con outfits
+  `.bow`, `.roundGlasses`, `.crown`, `.beanie`, `.sunglasses`, `.partyHat`,
+  `.scarf`) y en `BotEngine.swift` (8 refs internas: `outfit`,
+  `outfitPresence`, `drawOutfitBehind/Front`, tween `"outfitPresence"`),
+  más los tests. Borrarlos ahora rompería el build con certeza.
+  Para borrarlos (sesión 4, con build en la Mac): reemplazar o quitar las
+  escenas `HubHero`/`HubMochiScene`, y destripar `BotEngine` (quitar
+  `outfit`/`outfitPresence`/`drawOutfit*`/`outfitTarget`).
+
+### 7.4 AndroidLinkProtocol
+
+- `AndroidLinkProtocol.swift:140` (`instanceName`): nombre por defecto
+  `"Coucou"` → `"JESLY"` si el Mac no tiene nombre (y su comentario).
+
+### 7.5 Qué queda de Mochi y por qué
+
+- Escenas Flow Hub `HubMochiScene` / `HubHero` (tropa que camina, con
+  outfits): quedan para la sesión 4.
+- `MochiRoom` / `FlowHubRoom`, `MochiStill` (Phone/Widgets), `MochiMood`,
+  `BotEngine` en el árbol, 29 WAV, `whats-new.json`: intactos.
+- `PRODUCT_NAME` + 3 scripts + bundle id: NO tocados (ver §8).
+
+### 7.6 Archivos cambiados en esta sesión (6, solo estos)
+
+| Archivo | Cambio |
+|---|---|
+| `NotchBuddy/Sources/App/BotCanvasView.swift` | Isla + minis → `SmokeCloudView` (−296/+~30 l.) |
+| `NotchBuddy/Sources/App/DesktopMochi.swift` | Flotante → `SmokeCloudView(size: 120)`; 2× `setOutfit` quitadas del controlador |
+| `NotchBuddy/Sources/CoucouKit/BotEngine.swift` | `setOutfit` → no-op |
+| `NotchBuddy/Sources/App/IslandViewContent.swift` | `WardrobeView` → aviso; borrados `OutfitPillView` + `drawOutfitIcon` |
+| `NotchBuddy/Sources/App/AppState.swift` | Quitadas `mochiOutfitSelection` / `wardrobePreviewOutfit` / `resolvedOutfit` / `_seasonalCache` |
+| `NotchBuddy/Sources/App/AndroidLink/AndroidLinkProtocol.swift` | Nombre por defecto → `"JESLY"` |
+
+Verificación sin compilar: balance llaves/paréntesis/corchetes 0 en los 6
+archivos; grep `resolvedOutfit|mochiOutfitSelection|wardrobePreviewOutfit|
+OutfitPillView|drawOutfitIcon` = 0 en todo el árbol (salvo un comentario);
+`project.yml` sin tocar. **No afirmo que compile** — solo la Mac lo confirma.
+
+## 8. Decisión pendiente de JC: PRODUCT_NAME + bundle id + firmado (NO tocado)
+
+Nada de esto cambia en la sesión 3. Cuando JC decida, todo cambia **junto**,
+en un solo lote, con build en la Mac para verificar.
+
+### 8.1 PRODUCT_NAME: `Coucou` → `JeslyIsland` (project.yml:178)
+
+Archivos que cambiarían en el mismo lote:
+
+| Archivo | Qué hardcodea |
+|---|---|
+| `scripts/cloud-test-build.sh` | `APP=.../Coucou.app`, `PROFILE_NAME="Coucou Developer ID"`, `CONTAINER=iCloud.fr.louisraille.Coucou` |
+| `scripts/dev-install.sh` | `BUILT=.../Coucou.app`, `TARGET=/Applications/Coucou.app`, `pgrep -x Coucou` |
+| `scripts/release.sh` | `APP`, `ZIP`, grep de entitlements `iCloud.fr.louisraille.Coucou`, título de release |
+
+Hoy el `.app` compilado se sigue llamando `Coucou.app` (display name `JESLY`).
+
+### 8.2 Bundle id: `fr.louisraille.*` → `com.jesly.island`
+
+Archivos que cambiarían en el mismo lote:
+
+- `project.yml`: `bundleIdPrefix` (l. 3), `CFBundleIdentifier` +
+  `PRODUCT_BUNDLE_IDENTIFIER` de los 5 targets.
+- 6–8 `.entitlements` (`Resources/Coucou*.entitlements`): contenedores
+  CloudKit `iCloud.fr.louisraille.*` → contenedores nuevos `com.jesly.*`,
+  que hay que crear en la cuenta de desarrollador de JC.
+- Keychain (grupo de acceso), esquema de URL `coucou://`, `COUCOU_APNS_ENV`.
+
+### 8.3 Preguntas que solo JC puede responder
+
+1. ¿Tiene cuenta de desarrollador Apple / Developer ID a nombre de JESLY
+   para firmar el build, o se sigue en ad-hoc sin notarizar (aviso de macOS
+   la primera vez)?
+2. ¿Creamos contenedores CloudKit nuevos, o se deja iCloud apagado? (La
+   sincronización con iPhone se re-piensa: la PWA de JESLY ya cubre iPhone
+   sin CloudKit.)
+3. ¿El `.app` final se llama `JeslyIsland.app` y vive en
+   `/Applications/JESLY.app`?
+
+Sin esas tres respuestas no se toca nada de §8.1–8.2: renombrar el producto
+sin su identidad de firmado rompe el build en la nube y la notarización.

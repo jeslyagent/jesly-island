@@ -532,36 +532,16 @@ final class BotEngine: ObservableObject {
         }
     }
 
+    /// Fase 2, sesión 3: JESLY no tiene ropa. No-op por compatibilidad:
+    /// los llamadores que quedan (`HubMochiScene`, controlador del flotante)
+    /// siguen compilando, pero ningún outfit se aplica jamás. `outfit` y
+    /// `outfitPresence` se mantienen como estado muerto (los lee el propio
+    /// motor en `update`/`draw`); se quitan cuando caiga `BotEngine`.
     func setOutfit(_ newOutfit: Outfit, animated: Bool = true) {
-        guard newOutfit != outfitTarget else { return }
-        outfitTarget = newOutfit
-        tweens.removeValue(forKey: "outfitPresence")
-        locks.remove("outfitPresence")
-        if !animated {
-            outfit = newOutfit
-            outfitPresence = newOutfit != .none ? 1 : 0
-        } else if newOutfit == .none {
-            // Exit: fade out then clear outfit
-            anim("outfitPresence", keys: [TweenKey(target: 0, duration: 180, ease: Ease.inOut)]) { [weak self] in
-                self?.outfit = .none
-            }
-        } else if outfit == .none {
-            // Enter: set outfit then animate in (Ease.back applied to position offsets in drawing code)
-            outfit = newOutfit
-            outfitPresence = 0
-            anim("outfitPresence", keys: [TweenKey(target: 1, duration: 350, ease: Ease.inOut)]) { [weak self] in
-                self?.squash()
-            }
-        } else {
-            // Change: exit old, set new, enter
-            anim("outfitPresence", keys: [TweenKey(target: 0, duration: 180, ease: Ease.inOut)]) { [weak self] in
-                guard let self else { return }
-                self.outfit = newOutfit
-                self.anim("outfitPresence", keys: [TweenKey(target: 1, duration: 350, ease: Ease.inOut)]) { [weak self] in
-                    self?.squash()
-                }
-            }
-        }
+        _ = newOutfit
+        _ = animated
+        outfit = .none
+        outfitPresence = 0
     }
 
     func greet() {

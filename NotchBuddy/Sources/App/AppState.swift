@@ -71,10 +71,6 @@ final class AppState: ObservableObject {
         didSet { UserDefaults.standard.set(recapHideProjects, forKey: "recapHideProjects") }
     }
 
-    // Mochi outfit selection — persisted
-    @Published var mochiOutfitSelection: Outfit = .auto {
-        didSet { Outfit.stored = mochiOutfitSelection }
-    }
     // A colour of the user's own for each pill's Mochi (pill id → "#RRGGBB") — persisted.
     // Empty means the catalog's colours. PillDefinition.color reads the stored value, so
     // what is built from the catalog follows on its own; the tasks already on the island
@@ -98,24 +94,6 @@ final class AppState: ObservableObject {
         guard let def = PillCatalog.definition(for: id) else { return }
         pillColors = PillColors.picking(hex, for: id, catalogColor: def.defaultColor, in: pillColors)
     }
-    // Transient: outfit preview while hovering in wardrobe (overrides resolvedOutfit in BotCanvasView)
-    var wardrobePreviewOutfit: Outfit? = nil
-    // Per-day seasonal cache — read on every Mochi frame: valid until the next midnight,
-    // so a frame costs one date comparison instead of calendar math.
-    private var _seasonalCache: (validUntil: Date, outfit: Outfit)?
-    var resolvedOutfit: Outfit {
-        if let preview = wardrobePreviewOutfit { return preview }
-        guard mochiOutfitSelection == .auto else { return mochiOutfitSelection }
-        let now = Date()
-        if let c = _seasonalCache, now < c.validUntil { return c.outfit }
-        let cal = Calendar.current
-        let outfit = Outfit.seasonal(for: now, calendar: cal)
-        let midnight = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: now))
-            ?? now.addingTimeInterval(3600)
-        _seasonalCache = (validUntil: midnight, outfit: outfit)
-        return outfit
-    }
-
     // Claude model used by the chat and the search — persisted
     static let defaultClaudeModel = "claude-sonnet-4-6"
     @Published var claudeModel: String = AppState.defaultClaudeModel {
@@ -574,7 +552,6 @@ final class AppState: ObservableObject {
 
         if let v = ud.object(forKey: "soundEnabled") as? Bool   { soundEnabled = v }
         if let v = ud.object(forKey: "soundVolume")  as? Double { soundVolume  = v }
-        mochiOutfitSelection = Outfit.stored
         pillColors = PillColors.stored
         if let v = ud.string(forKey: "claudeModel"),
            !v.trimmingCharacters(in: .whitespaces).isEmpty { claudeModel = v }

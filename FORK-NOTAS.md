@@ -243,3 +243,72 @@ la nube. Va junto con la decisión de bundle id, con build en la Mac.
   `MochiMood`, sonidos 29 WAV, `whats-new.json`: intactos.
 - `AndroidLinkProtocol.swift:140`: nombre de instancia por defecto
   `"Coucou"` si el Mac no tiene nombre (sesión 3).
+
+---
+
+## FASE 2, SESIÓN 3 — 2026-11-27 (local, SIN pushear, SIN compilar)
+
+Sesión 2 verificada corriendo en la Mac de JC antes de empezar (13:20 AST,
+pull Fast-forward a `5cc5fd0`, menú y ventana dicen JESLY, nube en Flow Hub).
+
+### 1. Isla del notch → nube
+
+- `NotchBuddy/Sources/App/BotCanvasView.swift`: `BotCanvasView` y
+  `MiniBotCanvasView` ya no dibujan con `BotEngine`: `GeometryReader` +
+  `SmokeCloudView(size: min(ancho, alto))`, `listening: state.voiceActive`
+  en la principal. API intacta para no tocar llamadores (`IslandRootView`,
+  `IslandWindowController:1648`, `CornerIsland`, `CoucoudoroViews`,
+  `FlowPill`, `SpotifyViews`, `IslandViewContent`). `paused` → `Color.clear`.
+- Se pierde sin equivalente en la nube: estados de ánimo, baile con música,
+  morph de subida, emotes (slap/greet/blink/gulp). Los minis animan ahora a
+  60 fps en vez de 30 (vigilar CPU en vivo).
+- `BotEngine` sigue en el árbol pero ya no dibuja la isla.
+
+### 2. Flotante → nube
+
+- `NotchBuddy/Sources/App/DesktopMochi.swift`: `DesktopBotView` =
+  `SmokeCloudView(size: 120, listening: appState.voiceActive)` + hover 1.07.
+  `engine` se mantiene como parámetro; el controlador sigue creándolo para
+  emotes/sonidos, que ya no se ven ni se oyen. Doble clic sigue volviendo a
+  casa. `viewState.paused` ya no pausa el dibujo.
+- Claves `UserDefaults` `desktopMochiX/Y` + `mochiOnDesktop` NO renombradas
+  (dato persistido: renombrar huérfana la posición guardada).
+
+### 3. Guardarropa: selector quitado, archivos NO borrados
+
+- `BotEngine.setOutfit` → no-op (`outfit = .none`, `outfitPresence = 0`).
+- `AppState`: quitados `mochiOutfitSelection`, `wardrobePreviewOutfit`,
+  `resolvedOutfit`, `_seasonalCache` y la línea de init. Grep después: 0 refs.
+- `IslandViewContent.swift`: `WardrobeView` → aviso ("JESLY no tiene ropa:
+  la nube es la nube." + Volver). Borrados `OutfitPillView` y
+  `drawOutfitIcon`. Ruta `.wardrobe`, atajo ⌃⌥G y handlers siguen y muestran
+  el aviso.
+- ❌ **NO se borraron `MochiOutfitDrawing.swift`, `MochiWardrobe.swift`,
+  `tests/MochiWardrobeTests.swift` ni `scripts/test-wardrobe.sh`**: la
+  condición (grep 0) NO se cumple. `Outfit` sigue en `FlowHubMochis.swift`
+  (escenas `HubHero` con `.bow`, `.roundGlasses`, `.crown`, etc.) y en
+  `BotEngine` (8 refs internas). Para borrarlos (sesión 4): reemplazar o
+  quitar `HubHero`/`HubMochiScene` y destripar `BotEngine`.
+
+### 4. AndroidLinkProtocol
+
+- Nombre de instancia por defecto `"Coucou"` → `"JESLY"`.
+
+### 5. PRODUCT_NAME + bundle id: NO tocados
+
+Decisión pendiente de JC documentada en `README-FASE2.md` §8: firmado
+Developer ID, contenedores CloudKit nuevos o iCloud apagado, y nombre final
+del `.app`. Sin esas respuestas no se toca nada.
+
+### 6. Qué queda de Mochi
+
+- Escenas `HubMochiScene`/`HubHero` (Flow Hub), `MochiRoom`/`FlowHubRoom`,
+  `MochiStill` (Phone/Widgets), `BotEngine` en el árbol, 29 WAV,
+  `whats-new.json`: intactos, quedan para la sesión 4.
+
+### 7. Archivos cambiados (6)
+
+`BotCanvasView.swift`, `DesktopMochi.swift`, `BotEngine.swift`
+(`setOutfit` no-op), `IslandViewContent.swift`, `AppState.swift`,
+`AndroidLink/AndroidLinkProtocol.swift`. Balance 0 en los 6; grep de lo
+quitado = 0. **Sin compilar: solo la Mac lo confirma.**

@@ -133,11 +133,11 @@ enum AndroidLinkProtocol {
         return ["v": txtVersion, "fp": id]
     }
 
-    /// The service's instance name: the computer's name, at most 48 characters, "Coucou" if empty.
+    /// The service's instance name: the computer's name, at most 48 characters, "JESLY" if empty.
     static func instanceName(_ name: String) -> String {
         let trimmed = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(48))
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Coucou" : trimmed
+        return trimmed.isEmpty ? "JESLY" : trimmed
     }
 
     /// The name the phone shows for this Mac.
