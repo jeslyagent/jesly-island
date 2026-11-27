@@ -1,16 +1,17 @@
 import Combine
 import Foundation
 
-/// Poller básico de propuestas de JESLY (Fase 3, sesión 1).
+/// Poller de propuestas de JESLY (Fase 3, sesiones 1–2).
 ///
 /// Cada 5 s —el mismo sondeo que la isla actual— pregunta a la API
-/// local `GET /v1/tasks?status=esperando_aprobacion&kind=propuesta`
-/// y publica la lista para quien la observe. La tarjeta de
-/// Propuesta/Permiso (sesión 2) la leerá desde aquí.
+/// local las propuestas en los tres estados que la tarjeta necesita
+/// (`esperando_aprobacion`, `planificada`, `aplicada`) y publica las
+/// tres listas para quien las observe. La tarjeta de Propuesta/Permiso
+/// (sesión 2) las lee desde aquí, vía `JeslyProposalStore`.
 ///
 /// Comportamiento con la API apagada, a propósito: NO es un error
 /// que rompa nada. `apiReachable` pasa a `false`, `lastError` guarda
-/// el motivo y la lista anterior se conserva (una lista vieja en
+/// el motivo y las listas anteriores se conservan (una lista vieja en
 /// pantalla es mejor que un parpadeo a vacío cada 5 s). La pill
 /// muestra 0 propuestas pendientes, igual que la isla cuando la API
 /// no responde.
@@ -38,6 +39,11 @@ final class JeslyProposalsPoller: ObservableObject {
 
     /// Propuestas esperando aprobación, en el orden que devuelve la API.
     @Published private(set) var proposals: [JeslyTask] = []
+    /// Propuestas ya aprobadas (planificadas): ahí viven Aplicar,
+    /// Ejecutar y Descartar. (Sesión 2.)
+    @Published private(set) var plannedProposals: [JeslyTask] = []
+    /// Propuestas aplicadas: ahí vive Revertir. (Sesión 2.)
+    @Published private(set) var appliedProposals: [JeslyTask] = []
     /// false cuando el último sondeo no llegó a la API (apagada o sin red local).
     @Published private(set) var apiReachable: Bool = false
     /// Motivo del último fallo, nil cuando el último sondeo fue bien.
@@ -68,14 +74,23 @@ final class JeslyProposalsPoller: ObservableObject {
         defer { inFlight = false }
         do {
             // Cliente nuevo por sondeo: relee la clave del llavero cada vez.
+            // Las tres listas se piden a la vez, como la isla actual
+            // (`IslandStore.refreshProposals`): si una falla, fallan las
+            // tres y se conservan las listas anteriores.
             let client = JeslyAPIClient()
-            proposals = try await client.pendingProposals()
+            async let pending = client.pendingProposals()
+            async let planned = client.plannedProposals()
+            async let applied = client.appliedProposals()
+            let (pendingTasks, plannedTasks, appliedTasks) = try await (pending, planned, applied)
+            proposals = pendingTasks
+            plannedProposals = plannedTasks
+            appliedProposals = appliedTasks
             apiReachable = true
             lastError = nil
         } catch {
             apiReachable = false
             lastError = error.localizedDescription
-            // La lista anterior se conserva a propósito (ver cabecera).
+            // Las listas anteriores se conservan a propósito (ver cabecera).
         }
     }
 }

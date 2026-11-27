@@ -586,3 +586,111 @@ del plan). Riesgos que siguen: la API local apagada deja la pill vacía
 (por diseño, §11.3); si JC cambia el grupo de acceso del llavero en
 la Fase 6, revisar `ApiKeyStore` (el servicio `com.jesly.island` hoy
 no depende del bundle id del build).
+
+## 12. Fase 3, sesión 2 — tarjeta Propuesta/Permiso + clave en Ajustes + "Siempre" (2026-11-27, local, SIN pushear, SIN compilar)
+
+### 12.1 Archivos nuevos (2)
+
+- `NotchBuddy/Sources/JeslyIsland/JeslyProposalStore.swift`: `AlwaysRule`
+  (porte verbatim de la isla actual, misma clave de UserDefaults
+  `com.jesly.island.alwaysRules`, así que las reglas de la isla actual
+  se leen igual) + `JeslyProposalStore` (`@MainActor`, singleton):
+  observa las tres listas del poller, pone la primera propuesta en
+  `current` (esperando → planificada → aplicada), `act(_:on:)` y
+  `answerPermission(_:for:)` por `proposalAction(taskId:)` con el
+  `task id` exacto, `applyAlwaysRules` (cada auto-aprobación pasa por
+  `POST /v1/tasks/:id/approve` y queda en `autoApprovedLog`), y
+  `syncIsland()` que abre/cierra la tarjeta. Nunca toca el hook.
+- `NotchBuddy/Sources/JeslyIsland/Views/JeslyProposalCardView.swift`:
+  `JeslyProposalView`, mismo cromo que `ApprovalView` (fondo ámbar,
+  cabecera `AgentWho` con pill JESLY hueso, contador "1/N", botones
+  píldora `PrimaryButton`/`SecondaryButton` en verbatim). El `task id`
+  se captura al dibujar y el clic se ignora si la tarjeta ya pasó a
+  la siguiente (igual que `shownId` en `ApprovalView`).
+
+### 12.2 Botones por estado (`JeslyTask.availableActions`)
+
+- esperando_aprobacion → **Permitir** (approve) / **Denegar** (reject) / **Siempre** (crea la regla agente+tipo Y aprueba esta propuesta).
+- planificada con parche → **Aplicar** (apply) / **Descartar**.
+- planificada sin parche → **Ejecutar** (execute) / **Descartar**.
+- aplicada → **Revertir** (revert).
+- La primera acción no destructiva es la primaria (hueso).
+
+### 12.3 Cómo se abre la tarjeta (nuevo `IslandView.jeslyProposal`)
+
+- `IslandTypes.swift`: caso nuevo `jeslyProposal` en el enum. No hay
+  ningún `switch` exhaustivo sobre `IslandView` fuera de
+  `IslandViewContent` (CoucoudoroController tiene `default`), y
+  `IslandRootView` itera `allCases`, así que el caso nuevo se monta
+  solo; `IslandViewContent` lo despacha a `JeslyProposalView()`.
+- `JeslyProposalStore.syncIsland()`: con propuesta y sin permiso ni
+  pregunta de Coucou en pantalla, abre la isla con `.hookExpand`
+  (igual que las alertas de Coucou); si la isla ya está abierta en
+  home/vacía/terminada/error, cambia la vista; si JC está en otra
+  vista (chat, ajustes…), no se la roba — la tarjeta espera al
+  siguiente sondeo. Sin propuestas y con la tarjeta abierta, vuelve
+  a home/vacía. Si JC desactiva la pill con la tarjeta abierta, la
+  tarjeta se cierra (el store también observa `activeIntegrations`).
+- `AppDelegate.setupIsland`: `JeslyProposalStore.shared.start()`,
+  junto al poller.
+
+### 12.4 Poller ampliado (sesión 1, mismo archivo)
+
+- `JeslyProposalsPoller` ahora trae las tres listas a la vez
+  (`pending` + `planned` + `applied`, con `async let` como la isla
+  actual): si una falla, fallan las tres y se conservan las listas
+  anteriores. Con la API apagada no aparece ninguna tarjeta nueva y
+  no hay errores; la pill muestra 0 propuestas.
+
+### 12.5 Ajustes → JESLY (fila nueva en el menú, tras Agents)
+
+- Clave de la API: `SecureField` + Guardar (`ApiKeyStore.save` al
+  llavero `com.jesly.island`, cuenta `jesly-api-key`; vacío = borrar)
+  + Borrar. Al guardar, `refreshNow()`: el siguiente sondeo ya usa
+  la clave nueva sin reiniciar. Nunca en texto plano ni en logs.
+  Muestra si la API local responde o no.
+- Reglas "Siempre": lista agente · tipo con botón **Revocar** cada
+  una; sin reglas, "cada propuesta pide permiso". Debajo, las últimas
+  5 aprobadas solas por regla (auditoría).
+
+### 12.6 Verificación sin compilar (hecha)
+
+- Balance llaves/paréntesis/corchetes 0 (scanner Swift-aware con
+  interpolación) en los 7 archivos nuevos/tocados; mis inserciones
+  en `SettingsView`/`IslandViewContent` balanceadas en aislado.
+- Cada acción pasa por `proposalAction(taskId: task.id)` (grep):
+  `act` y auto-aprobación en el store; la vista solo llama al store.
+- Sin referencias al hook en el camino de JESLY (solo menciones en
+  comentarios de los archivos portados, explicando la diferencia).
+- Sin colisión de nombres (`JeslyProposalStore`, `JeslyProposalView`,
+  `AlwaysRule`, `PermissionAnswer` anidado). `project.yml` sin tocar
+  (el glob `Sources` ya incluye `Sources/JeslyIsland/`).
+- **No afirmo que compile** — solo la Mac lo confirma. Sospechosos
+  si falla: el `switch` nuevo en `IslandViewContent`, el
+  `CombineLatest3` del store, o el `AgentTask` sintético de la
+  cabecera.
+
+### 12.7 Riesgos y límites conocidos
+
+- Si JC está en otra vista de la isla (chat, ajustes) cuando llega
+  una propuesta, la tarjeta no se la roba: aparece en el siguiente
+  sondeo (5 s) o al volver al home.
+- Con la API apagada tras haber actuado, el poller conserva la lista
+  vieja: el store guarda los ids decididos (`decidedIds`) para que
+  la tarjeta no vuelva a mostrar una propuesta ya decidida; se
+  limpian en el primer sondeo que llega bien.
+- Una propuesta que casa con una regla se auto-aprueba en el sondeo;
+  puede verse un instante en la tarjeta antes de que el sondeo
+  siguiente la quite (igual que la isla actual).
+- La tarjeta no pone badge en la pill (no hay `AgentTask` de JESLY
+  en `state.tasks`): si la isla está en otra vista, la propuesta
+  solo se ve al volver al home. Follow-up, no de esta sesión.
+
+### 12.8 Para la sesión 3
+
+- Tarjeta de sesión en vivo para JESLY (pasos + diff real del
+  parche, mapa A del plan; no inventar pasos de terminal).
+- Verificación/publicación en la tarjeta (Fase 4, mapa A):
+  `POST /v1/tasks/:id/verify` y `/publish`.
+- Pill `jesly_chat` + proveedor `JeslyChatProvider` (Fase 4, mapa D);
+  `ChatProvider` de Coucou sigue sin tocarse.

@@ -5,7 +5,11 @@ import AppKit
 struct SettingsView: View {
     @ObservedObject private var state = AppState.shared
     @ObservedObject private var demoEngine = DemoEngine.shared
+    @ObservedObject private var jeslyStore = JeslyProposalStore.shared
     @State private var apiKey: String = KeychainStore.shared.get("anthropic-api-key") ?? ""
+    // JESLY (Fase 3): la clave se lee del llavero al abrir Ajustes; el
+    // SecureField la oculta y solo se guarda con el botón Guardar.
+    @State private var jeslyApiKey: String = ApiKeyStore.read() ?? ""
 
     // Claude model — dynamic list fetched from the API, static fallback if unavailable
     private static let fallbackModels: [(id: String, label: String)] = [
@@ -194,6 +198,7 @@ struct SettingsView: View {
                         SettingsSidebarRow(title: "General",      icon: "gearshape.fill",                    color: "#8E939C").tag("general")
                         SettingsSidebarRow(title: "Active pills", icon: "square.grid.2x2.fill",              color: "#F5A524").tag("activepills")
                         SettingsSidebarRow(title: "Agents",       icon: "terminal.fill",                     color: "#3B9EFF").tag("agents")
+                        SettingsSidebarRow(title: "JESLY",        icon: "cloud.fill",                        color: "#E8E0D0").tag("jesly")
                         SettingsSidebarRow(title: "Chat",         icon: "bubble.left.and.bubble.right.fill", color: "#E07950").tag("chat")
                         SettingsSidebarRow(title: "Integrations", icon: "puzzlepiece.extension.fill",        color: "#7C5CFF").tag("integrations")
                         #if !APPSTORE
@@ -273,6 +278,7 @@ struct SettingsView: View {
         case "general":      return String(localized: "General")
         case "activepills":  return String(localized: "Active pills")
         case "agents":       return String(localized: "Agents")
+        case "jesly":        return String(localized: "JESLY")
         case "chat":         return String(localized: "Chat")
         case "integrations": return String(localized: "Integrations")
         case "voice":        return String(localized: "Voice")
@@ -285,6 +291,7 @@ struct SettingsView: View {
         switch section {
         case "activepills":  activePillsSection
         case "agents":       agentsSection
+        case "jesly":        jeslySection
         case "chat":         chatSection
         case "integrations": integrationsSection
         #if !APPSTORE
@@ -631,6 +638,93 @@ struct SettingsView: View {
             .padding(6)
         }
             .settingsAnchor("pills.main")
+    }
+
+    // MARK: - JESLY section (Fase 3, sesión 2)
+
+    /// Clave de la API local + reglas "Siempre". La clave vive en el
+    /// llavero (`com.jesly.island`, cuenta `jesly-api-key`), nunca en
+    /// texto plano ni en logs; al guardarla, el poller la usa en el
+    /// siguiente sondeo sin reiniciar (crea cliente nuevo por sondeo).
+    @ViewBuilder private var jeslySection: some View {
+        GroupBox("JESLY — API local") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Clave de la API local de JESLY (127.0.0.1:3000). Sin clave la API local acepta igual.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                SecureField("Clave de la API", text: $jeslyApiKey)
+                    .textFieldStyle(.roundedBorder)
+                HStack(spacing: 8) {
+                    Button(String(localized: "Save")) {
+                        let trimmed = jeslyApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if trimmed.isEmpty {
+                            ApiKeyStore.delete()
+                            statusMessage = "Clave de JESLY borrada."
+                        } else if ApiKeyStore.save(trimmed) {
+                            statusMessage = "Clave de JESLY guardada en el llavero."
+                        } else {
+                            statusMessage = "❌ No se pudo guardar la clave en el llavero."
+                        }
+                        JeslyProposalsPoller.shared.refreshNow()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    Button("Borrar") {
+                        ApiKeyStore.delete()
+                        jeslyApiKey = ""
+                        statusMessage = "Clave de JESLY borrada."
+                        JeslyProposalsPoller.shared.refreshNow()
+                    }
+                    .buttonStyle(.bordered)
+                }
+                Text(JeslyProposalsPoller.shared.apiReachable
+                     ? "API local en línea."
+                     : "API local sin responder: la pill muestra 0 propuestas.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+            .padding(6)
+        }
+            .settingsAnchor("jesly.api")
+
+        GroupBox("Reglas «Siempre»") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Cada regla aprueba sola las próximas propuestas de ese agente y tipo, pasando por el endpoint real y quedando auditada. Sin regla, nada se aprueba solo.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                if jeslyStore.alwaysRules.isEmpty {
+                    Text("Sin reglas: cada propuesta pide permiso.")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                } else {
+                    ForEach(jeslyStore.alwaysRules) { rule in
+                        HStack(spacing: 8) {
+                            Text(verbatim: "\(rule.agentId.isEmpty ? "cualquier agente" : rule.agentId) · \(rule.kind)")
+                                .font(.system(size: 12))
+                            Spacer()
+                            Button("Revocar") {
+                                jeslyStore.revokeAlwaysRule(rule)
+                                statusMessage = "Regla «Siempre» revocada."
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        if rule != jeslyStore.alwaysRules.last { Divider() }
+                    }
+                }
+                if !jeslyStore.autoApprovedLog.isEmpty {
+                    Divider().padding(.vertical, 2)
+                    Text("Aprobadas solas por regla:")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+                    ForEach(Array(jeslyStore.autoApprovedLog.suffix(5)), id: \.self) { entry in
+                        Text(verbatim: entry)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding(6)
+        }
+            .settingsAnchor("jesly.always")
     }
 
     // MARK: - Agents section

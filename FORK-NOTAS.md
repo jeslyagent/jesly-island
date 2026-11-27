@@ -491,3 +491,54 @@ backend `proposalAction(taskId:)`); entrada de la clave en Ajustes
 (+ "Siempre" como regla revocable). Riesgos: API apagada = pill vacía
 (por diseño); si la Fase 6 cambia el grupo de acceso del llavero,
 revisar `ApiKeyStore`.
+
+## FASE 3, SESIÓN 2 — tarjeta Propuesta/Permiso + clave en Ajustes + "Siempre" (2026-11-27, local, SIN pushear, SIN compilar)
+
+### 1. Archivos nuevos (2)
+
+- `NotchBuddy/Sources/JeslyIsland/JeslyProposalStore.swift`: `AlwaysRule`
+  (verbatim de la isla actual, misma clave UserDefaults) +
+  `JeslyProposalStore` (singleton @MainActor): `current` (primera
+  propuesta: esperando → planificada → aplicada), `act` /
+  `answerPermission` por `proposalAction(taskId:)` con el task id
+  exacto, `applyAlwaysRules` (auto-aprobación por endpoint real +
+  `autoApprovedLog`), `syncIsland()` (abre/cierra la tarjeta).
+- `NotchBuddy/Sources/JeslyIsland/Views/JeslyProposalCardView.swift`:
+  `JeslyProposalView`, mismo cromo que `ApprovalView` (fondo ámbar,
+  `AgentWho` JESLY hueso, "1/N", botones píldora en verbatim). El
+  task id se captura al dibujar; el clic se ignora si la tarjeta ya
+  pasó a la siguiente.
+
+### 2. Botones por estado
+
+- esperando → Permitir / Denegar / Siempre (crea la regla y aprueba esta).
+- planificada con parche → Aplicar / Descartar; sin parche → Ejecutar / Descartar.
+- aplicada → Revertir. Primaria = primera no destructiva.
+
+### 3. Cableado
+
+- `IslandTypes.swift`: caso nuevo `IslandView.jeslyProposal` (sin
+  switch exhaustivo que romper; `IslandRootView` itera `allCases`).
+- `IslandViewContent.swift`: dispatch a `JeslyProposalView()`.
+- `AppDelegate.setupIsland`: `JeslyProposalStore.shared.start()`.
+- `JeslyProposalsPoller`: ahora trae las tres listas a la vez; con la
+  API apagada no hay tarjeta nueva ni errores (0 propuestas).
+- `SettingsView`: fila JESLY (tras Agents) con clave API (SecureField
+  + Guardar/Borrar al llavero `com.jesly.island`, `refreshNow()` sin
+  reiniciar) y reglas "Siempre" con Revocar + últimas 5 auto-aprobadas.
+
+### 4. Verificación sin compilar (hecha)
+
+Balance 0 en los 7 archivos (scanner con interpolación); cada acción
+pasa por `proposalAction(taskId: task.id)`; sin hook en el camino de
+JESLY; sin colisión de nombres; `project.yml` sin tocar. **Sin
+compilar: solo la Mac lo confirma.**
+
+### 5. Para la sesión 3
+
+Tarjeta de sesión en vivo (pasos + diff real, sin inventar pasos de
+terminal); verificación/publicación en la tarjeta (Fase 4);
+pill `jesly_chat` + `JeslyChatProvider` (Fase 4). Riesgos: la tarjeta
+no roba otras vistas (aparece al volver al home o en el siguiente
+sondeo); sin badge en la pill; con la API apagada tras actuar, los
+ids decididos se guardan hasta el primer sondeo bueno.

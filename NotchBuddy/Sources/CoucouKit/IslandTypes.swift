@@ -18,6 +18,7 @@ enum IslandView: String, CaseIterable {
     case update       // a new Coucou is out on GitHub: one click to install it (GitHub build)
     case whatsNew     // Coucou just updated itself: what the version brings, then your Coucou so far (GitHub build)
     case launch       // a new Claude Code session: a prompt, a project, and the terminal opens (GitHub build)
+    case jeslyProposal // JESLY (Fase 3): tarjeta Propuesta/Permiso — la decisión vale para el task id exacto, sin hook
 }
 
 // MARK: - Bot State
