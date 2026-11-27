@@ -13,6 +13,7 @@ struct IslandViewContent: View {
         case .approval:  ApprovalView(state: state)
         case .jeslyProposal: JeslyProposalView()
         case .jeslySession:  JeslySessionView()
+        case .jeslyChat:     JeslyChatView()
         case .question:  QuestionView(state: state)
         case .error:     ErrorView(state: state)
         case .finished:  FinishedView(state: state)
@@ -356,6 +357,10 @@ struct OverviewView: View {
             switchChatProvider(.ollama)
         case "ai_lmstudio":
             switchChatProvider(.lmstudio)
+        case "jesly_chat":
+            // JESLY (Fase 4, sesión 2): el chat propio, no el de
+            // Coucou — `ChatProvider(pillID:)` es nil para esta pill.
+            state.view = .jeslyChat
         case "integration_music":
             #if !APPSTORE
             MusicController.shared.openMusic()
@@ -2246,6 +2251,13 @@ struct IntegrationCardView: View {
                    || task.pill == "agent_muse"         || task.pill == "agent_opencode"
                    || task.pill == "agent_amp"          || task.pill == "agent_hermes"
         let isAI    = ChatProvider(pillID: task.id) != nil
+        if task.id == "jesly_chat" {
+            // JESLY (Fase 4, sesión 2): el chat no pide clave — la
+            // API local acepta sin Bearer. Sin esta guarda la tarjeta
+            // diría "Key not configured" (`isConfigured` es false
+            // por defecto y `ChatProvider(pillID:)` es nil).
+            return String(localized: "Ready · no setup needed")
+        }
         if isConfigured {
             if isHooks { return String(localized: "Hooks installed") }
             // No key or poller behind this pill: it only reflects hook events.
@@ -2472,6 +2484,16 @@ struct IntegrationCardView: View {
                             .buttonStyle(.plain)
                         }
                         #endif
+                    } else if task.id == "jesly_chat" {
+                        // JESLY (Fase 4, sesión 2): el chat propio. Sin
+                        // puerta de `isConfigured`: la API local acepta
+                        // sin clave, como la pill no pide ninguna.
+                        Button(String(format: String(localized: "Chat with %@"), "JESLY")) {
+                            appState.view = .jeslyChat
+                        }
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(Color(hex: task.color).opacity(0.85))
+                        .buttonStyle(.plain)
                     } else if let provider = ChatProvider(pillID: task.id) {
                         if isConfigured {
                             Button(String(format: String(localized: "Chat with %@"), task.name)) {

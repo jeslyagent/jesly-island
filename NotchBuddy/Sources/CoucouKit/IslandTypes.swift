@@ -20,6 +20,7 @@ enum IslandView: String, CaseIterable {
     case launch       // a new Claude Code session: a prompt, a project, and the terminal opens (GitHub build)
     case jeslyProposal // JESLY (Fase 3): tarjeta Propuesta/Permiso — la decisión vale para el task id exacto, sin hook
     case jeslySession // JESLY (Fase 3, sesión 3): tarjeta de sesión en vivo — pasos reales + diff real del parche, sin hook
+    case jeslyChat // JESLY (Fase 4, sesión 2): vista de chat — proveedor JeslyChatProvider, modelo real de la respuesta
 }
 
 // MARK: - Bot State

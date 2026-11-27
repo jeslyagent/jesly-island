@@ -649,3 +649,56 @@ real); voz "Oye JESLY" y ojos después. Riesgos: `verify` con checks
 locales no dice nada de lo desplegado si la tarea toca `cloud/` —
 ahí el botón correcto es Publicar; la pill `jesly_chat` aún no abre
 vista; sin badge en la pill.
+
+## FASE 4, SESIÓN 2 — Vista de chat JESLY (2026-11-27, local, SIN pushear, SIN compilar)
+
+### 1. Qué se hizo
+
+- `JeslyChatView` nueva (`Views/JeslyChatView.swift`): selector de
+  proveedor (chip que cicla: Automático → Ollama → FreeLLMAPI →
+  Groq → Gemini → OpenRouter), historial, entrada y envío por
+  `JeslyAPIClient.chat`. Cromo de `PromptView` de Coucou. Debajo de
+  cada respuesta de JESLY, el modelo REAL (`ChatResponse.model` +
+  proveedor), nunca inventado.
+- `JeslyChatStore` nuevo (singleton `@MainActor`): historial en el
+  store, no en la vista; proveedor elegido persistido en
+  UserDefaults (`com.jesly.island.chatProvider`); sin API, el envío
+  falla con el mensaje claro de la isla actual.
+- Apertura por las dos vías de Coucou: botón "Chat with JESLY" en
+  la tarjeta de la pill (sin puerta de `isConfigured`: no pide
+  clave) y la flecha ↗ (`openAgentTarget`). Caso nuevo
+  `IslandView.jeslyChat` + dispatch.
+- La tarjeta de la pill ya no dice "Key not configured":
+  `statusLabel` devuelve "Ready · no setup needed" para
+  `jesly_chat` (antes caía ahí porque `isConfigured` es false por
+  defecto y `ChatProvider(pillID:)` es nil).
+
+### 2. Qué pasa con la API apagada
+
+Nada roto: la vista lo dice claro antes del primer envío
+(127.0.0.1:3000 + cómo arrancar la API) y si el envío falla la
+respuesta es el mensaje de la isla actual. Sin errores en la
+interfaz.
+
+### 3. Qué NO se hizo
+
+Sin ojos (soltar archivos) ni micrófono/voz; sin workflows ni
+habilidades; sin tocar bundle id, entitlements, `HookServer`,
+`PillCatalog` ni `project.pbxproj`. Tarjetas de permiso y sesión
+intactas: `syncIsland` no roba la vista de chat.
+
+### 4. Verificación sin compilar (hecha)
+
+Balance 0 en los 5 archivos (escáner por líneas; falso +1 inicial
+por interpolación anidada, comparado contra el HEAD); el chat usa
+`JeslyChatProvider`, ningún uso del `ChatProvider` de Coucou en el
+camino de JESLY (grep); sin respuestas hardcodeadas (grep).
+`project.yml` sin tocar. **Sin compilar: solo la Mac lo
+confirma.** Sospechosos: `JeslyChatView` o el switch nuevo en
+`IslandViewContent`.
+
+### 5. Para la Fase 4, sesión 3
+
+Voz "Oye JESLY" (mapa E) y ojos (mapa C: soltar archivo →
+`POST /v1/chat` con attachments). Riesgos: el historial no
+persiste entre arranques; sin badge en la pill.

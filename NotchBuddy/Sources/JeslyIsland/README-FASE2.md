@@ -882,3 +882,91 @@ diff, esa parte no se muestra.
   (`JeslyChatProvider.all`), historial, modelo real de la
   respuesta, entrada de texto; sin API, "API local sin responder".
 - Voz "Oye JESLY" (mapa E) y ojos (mapa C) quedan para después.
+
+## §15. FASE 4, SESIÓN 2 — Vista de chat JESLY (2026-11-27, local, SIN pushear, SIN compilar)
+
+### 15.1 Qué se hizo
+
+- Vista de chat `JeslyChatView` (`Views/JeslyChatView.swift`, nueva):
+  selector de proveedor (chip que cicla), historial, entrada de
+  texto y envío por `JeslyAPIClient.chat`. Cromo reutilizado de
+  `PromptView` (fondo `CardBackground(wash: .indigo)`, lista con
+  `ScrollViewReader` que baja sola, fila de entrada con
+  `SendButtonStyle`, mismo padding); mensajes con el formato de la
+  isla actual (`ChatView`, HEAD `3e2a59db`): "Tú" / "JESLY" y debajo
+  de cada respuesta de JESLY el modelo REAL que respondió
+  (`ChatResponse.model`, con el proveedor: "groq ·
+  openai/gpt-oss-20b"), nunca uno inventado. Si la respuesta no trae
+  modelo, la fila no muestra ninguno.
+- Store `JeslyChatStore` (`JeslyChatStore.swift`, nuevo, singleton
+  `@MainActor` como `JeslyProposalStore`): el historial vive ahí,
+  no en la vista, para no perderse al cambiar de vista. `send`
+  llama a `chat(message:provider:)` con el proveedor elegido
+  (nil = Automático) y guarda proveedor y modelo reales de cada
+  respuesta. El proveedor elegido persiste en UserDefaults
+  (`com.jesly.island.chatProvider`).
+- Apertura desde la pill `jesly_chat` por las dos vías de Coucou:
+  botón "Chat with JESLY" en la tarjeta de la pill
+  (`IntegrationCardView`, sin puerta de `isConfigured` — JESLY no
+  pide clave) y la flecha ↗ (`openAgentTarget`: `case "jesly_chat":
+  state.view = .jeslyChat`). Caso nuevo `IslandView.jeslyChat` +
+  dispatch en `IslandViewContent`.
+- La tarjeta de la pill ya no miente: `statusLabel` devuelve
+  "Ready · no setup needed" para `jesly_chat` (antes caía en "Key
+  not configured": `isConfigured` es false por defecto y
+  `ChatProvider(pillID:)` es nil para esta pill).
+
+### 15.2 Qué pasa con la API apagada
+
+Sin errores en la interfaz. Antes del primer envío la vista dice
+claro que la API no responde en 127.0.0.1:3000 y cómo arrancarla
+(`scripts/arrancar-todo.sh`); si el envío falla, la respuesta es el
+mensaje de la isla actual ("No pude hablar con la API. Revisa que
+esté arrancada.") y el motivo queda en `lastError` bajo la entrada.
+
+### 15.3 Qué NO se hizo en esta sesión
+
+- Sin zona para soltar archivos (ojos, mapa C) ni micrófono (voz,
+  mapa E): la vista no manda adjuntos. Sin workflows ni
+  habilidades (Fase 5). Sin tocar bundle id, entitlements,
+  `HookServer`, `PillCatalog` ni `project.pbxproj`.
+- Las tarjetas de Propuesta/Permiso y Sesión en vivo quedan
+  intactas: `syncIsland` no roba la vista de chat (`.jeslyChat` no
+  está en su lista de vistas que puede reemplazar) y solo cierra
+  `.jeslyProposal`/`.jeslySession`.
+
+### 15.4 Verificación sin compilar (hecha)
+
+- Balance llaves/paréntesis/corchetes **0** en los 5 archivos
+  nuevos/tocados (escáner por líneas; la primera pasada dio un
+  falso +1 por la interpolación anidada
+  `"\(... "\(provider) · \(model)")"` y el trazado por línea lo
+  dejó en 0; el HEAD sin tocar da el mismo artefacto en los
+  archivos grandes, así que se comparó contra el HEAD).
+- El chat usa `JeslyChatProvider` (grep): ningún uso del
+  `ChatProvider` de Coucou en el camino de JESLY; un solo `enum
+  ChatProvider` en todo el módulo. Sin respuestas hardcodeadas
+  (grep: sin TODO/lorem; el único texto de error es el de la isla
+  actual, que se muestra como mensaje, no como respuesta
+  inventada).
+- `project.yml` sin tocar en esta sesión.
+- **No afirmo que compile** — solo la Mac lo confirma.
+  Sospechosos si falla: `JeslyChatView` (usa `CardBackground`,
+  `TypingDotsView` y `SendButtonStyle` de Coucou, como
+  `PromptView`) o el `switch` nuevo en `IslandViewContent`.
+
+### 15.5 Riesgos y límites conocidos
+
+- El historial de chat no persiste entre arranques (solo vive en
+  el store en memoria, como el de Coucou).
+- Sin badge en la pill (sigue sin haber `AgentTask` de JESLY en
+  `state.tasks`): con la isla en otra vista, un mensaje nuevo no
+  avisa.
+- La vista no roba otras vistas de la isla: si JC está en ajustes
+  o en una tarjeta, el chat se abre solo al tocar la pill.
+
+### 15.6 Para la Fase 4, sesión 3
+
+- Voz "Oye JESLY" (mapa E: demonio Vosk + `GET
+  /v1/voice/wake/status` + modo voz con interrupción) y ojos
+  (mapa C: soltar archivo → `POST /v1/chat` con attachments).
