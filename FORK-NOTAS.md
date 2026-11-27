@@ -128,3 +128,55 @@ Eso compila Coucou original (con Mochi). La base local de esta VM (`~/workspace/
 tiene solo los 2 renombres de arriba; para llevarla a la Mac hace falta primero
 crear el repo remoto (pregunta pendiente: cuenta `jeslyagent` o `NEXORA16-admin` —
 ver plan) o pasar la carpeta por otro medio que JC autorice.
+
+---
+
+## FASE 2, SESIÓN 1 — 2026-11-27 (sin pushear, sin compilar)
+
+**Repo remoto ya existe:** JC lo creó en la web, `jeslyagent/jesly-island`, y la
+Fase 1 se pusheó y se verificó (commit `62ced5b2`). Esta sesión trabaja sobre
+la base local; NADA de esta sesión está pusheado todavía.
+
+### Auditoría Mochi (medido de nuevo, sin `.git`)
+
+- `mochi`: **3.939 ocurrencias en 400 archivos** (Fase 1 decía 3.909/397; la
+  diferencia es este mismo archivo `FORK-NOTAS.md`).
+- `coucou`: **11.007 ocurrencias**.
+- Por carpeta: `android` 178 archivos, `windows` 89, `NotchBuddy` 86,
+  `docs` 12, `tests` 6, `scripts` 6, `design` 5, `.github` 4, `linux` 3,
+  `relay` 2. En `NotchBuddy/Sources`: 698 ocurrencias en 80 archivos Swift.
+- Archivos con `mochi` en el nombre: 43. `Localizable.xcstrings`: 314 `mochi`
+  + 1.484 `coucou`. `whats-new.json`: 152 `mochi`. `PillCatalog.swift`: 0
+  menciones a Mochi. Ningún test referencia la cadena `"Coucou"`.
+
+### Cambios de esta sesión
+
+1. `NotchBuddy/project.yml`: `CFBundleName` del target principal `Coucou` →
+   `JESLY` (l. 140) y `CFBundleDisplayName` de los 5 targets → `JESLY`
+   (ll. 141, 234, 320, 402, 447). Bundle id, `PRODUCT_NAME` y entitlements SIN tocar.
+2. Cadenas visibles (Mac, target principal): `AppDelegate.swift` 5×
+   `accessibilityDescription`, `FlowHub.swift` título + cabecera,
+   `SettingsView.swift` cabecera, `WeeklyRecapView.swift` imagen para compartir:
+   `"Coucou"` → `"JESLY"`.
+3. Personaje portado, byte a byte, sin adaptar el código:
+   `NotchBuddy/Sources/JeslyIsland/Character/SmokeCharacter.swift` (74 l.) y
+   `SmokeCloudView.swift` (140 l.), desde `jeslyagent/Jesly-agent-ai`
+   `apps/island/Sources/JeslyIsland/Character/` HEAD `3e2a59d`. El target los
+   compila solo (grupo `Sources` en `project.yml`). **No están conectados:**
+   ninguna vista los usa todavía. Detalle y mapa de reemplazo en
+   `NotchBuddy/Sources/JeslyIsland/README-FASE2.md`.
+4. `PRODUCT_NAME` NO se cambió: `scripts/cloud-test-build.sh`,
+   `scripts/dev-install.sh` y `scripts/release.sh` hardcodean `Coucou.app`;
+   va junto con esos 3 scripts en la sesión 2.
+5. `Localizable.xcstrings` NO se tocó: hay que cambiar solo valores, nunca
+   claves, y la frase `"OK Coucou"` va junto con `WakePhrase.swift`.
+6. Bundle id, entitlements, `HookServer` (socket/hook/protocolo),
+   `project.pbxproj`, zona CloudKit `"Coucou"`, `CHANGELOG.md`: NO tocados,
+   clasificados peligrosos sin compilar (ver README-FASE2 §4).
+
+### Para la sesión 2
+
+Ver `NotchBuddy/Sources/JeslyIsland/README-FASE2.md` §5: build de la sesión 1
+en la Mac, conectar `SmokeCloudView` en isla / flotante / Flow Hub, borrar
+`MochiOutfitDrawing.swift` (1.464 l.) y `MochiWardrobe.swift`, xcstrings en
+inglés, `PRODUCT_NAME` + 3 scripts, verificación en vivo.

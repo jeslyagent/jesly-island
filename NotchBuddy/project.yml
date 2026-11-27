@@ -137,7 +137,7 @@ targets:
     info:
       path: Resources/Info.plist
       properties:
-        CFBundleName: Coucou
+        CFBundleName: JESLY
         CFBundleDisplayName: JESLY
         CFBundleIdentifier: fr.louisraille.NotchBuddy
         CFBundleVersion: "28"
@@ -231,7 +231,7 @@ targets:
       path: Resources/InfoAppStore.plist
       properties:
         CFBundleName: Coucou
-        CFBundleDisplayName: Coucou
+        CFBundleDisplayName: JESLY
         CFBundleIdentifier: fr.louisraille.Coucou
         CFBundleVersion: "20"
         CFBundleShortVersionString: "2.0"
@@ -317,7 +317,7 @@ targets:
       path: Resources/InfoPhone.plist
       properties:
         CFBundleName: Coucou
-        CFBundleDisplayName: Coucou
+        CFBundleDisplayName: JESLY
         CFBundleIdentifier: fr.louisraille.Coucou
         CFBundleVersion: "21"
         CFBundleShortVersionString: "2.0"
@@ -399,7 +399,7 @@ targets:
       path: Resources/InfoWidgets.plist
       properties:
         CFBundleName: CoucouWidgets
-        CFBundleDisplayName: Coucou
+        CFBundleDisplayName: JESLY
         CFBundleIdentifier: fr.louisraille.Coucou.Widgets
         CFBundleVersion: "21"
         CFBundleShortVersionString: "2.0"
@@ -444,7 +444,7 @@ targets:
       path: Resources/InfoNotificationContent.plist
       properties:
         CFBundleName: CoucouNotificationContent
-        CFBundleDisplayName: Coucou
+        CFBundleDisplayName: JESLY
         CFBundleIdentifier: fr.louisraille.Coucou.NotificationContent
         CFBundleVersion: "21"
         CFBundleShortVersionString: "2.0"
