@@ -38,6 +38,8 @@ struct SettingsView: View {
     @State private var showDiff: Bool = false
     @State private var pendingHookJSON: String = ""
     @State private var hookNeedsUpdate: Bool = HookServer.hooksNeedUpdate()
+    /// Fase 6: alerta de dueña de los hooks (ver installHooks()).
+    @State private var showHookOwnerAlert = false
 
     #if !APPSTORE
     /// Bumped when a subscription tool is found or a switch moves: redraws Settings → Chat.
@@ -836,6 +838,19 @@ struct SettingsView: View {
                 Text("nb-hook : \(HookServer.hookScriptPath)")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary)
+                // Fase 6: si al arrancar el socket ya lo tenía otra app
+                // (Coucou original), este fork no recibe las sesiones de
+                // Claude Code. Sin este aviso, la pill diría "instalado"
+                // y no llegaría ningún evento, sin explicación.
+                if UserDefaults.standard.bool(forKey: HookServer.socketTakenKey) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                        Text("Otra app (Coucou original) ya escucha en nb.sock: este fork no ve las sesiones de Claude Code. Cierra la otra app y reinicia el fork para que él sea el dueño.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.orange)
+                    }
+                }
                 HStack(spacing: 10) {
                     Button(String(localized: "hooks.install")) { installHooks() }
                         .buttonStyle(.borderedProminent)
@@ -872,6 +887,15 @@ struct SettingsView: View {
             .padding(6)
         }
             .settingsAnchor("agents.claude")
+            .alert(
+                "Los hooks ya tienen dueña",
+                isPresented: $showHookOwnerAlert
+            ) {
+                Button("Mantener la otra app", role: .cancel) {}
+                Button("Hacerse dueña (instalar)") { proceedInstallHooks() }
+            } message: {
+                Text("~/.claude/settings.json ya envía los eventos de Claude Code a otra app (probablemente Coucou original) con el mismo nb-hook. Solo una app puede ser dueña de los hooks y del socket: la última que arranca se queda con los eventos y la otra deja de ver las sesiones. Las funciones de JESLY no necesitan los hooks. Si te haces dueña, se instalan los hooks del fork: cierra la otra app y reinicia el fork.")
+            }
 
         #if !APPSTORE
         GroupBox(String(localized: "hooks.gemini.title")) {
@@ -1858,7 +1882,29 @@ struct SettingsView: View {
         }
     }
 
+    /// Marca propia (UserDefaults, solo la ve este fork): true si los
+    /// hooks de Claude los instaló este fork. Si settings.json tiene
+    /// entradas nb-hook y la marca no está, las instaló otra app
+    /// (Coucou original). No se puede distinguir por el contenido:
+    /// el fork y Coucou original escriben el mismo nb-hook.
+    private static let jeslyForkHooksOwnerKey = "jeslyForkHooksInstalled"
+    private static var jeslyForkOwnsClaudeHooks: Bool {
+        UserDefaults.standard.bool(forKey: jeslyForkHooksOwnerKey)
+    }
+
     private func installHooks() {
+        // Fase 6: una sola app puede ser dueña de los hooks. Si
+        // settings.json ya tiene entradas nb-hook y no las instaló
+        // este fork, otra app es la dueña: avisar antes de tocar
+        // nada en vez de instalar por encima en silencio.
+        if HookServer.claudeHooksInstalled() && !Self.jeslyForkOwnsClaudeHooks {
+            showHookOwnerAlert = true
+            return
+        }
+        proceedInstallHooks()
+    }
+
+    private func proceedInstallHooks() {
         do {
             pendingHookJSON = try HookServer.shared.previewClaudeHooks()
             showDiff = true
@@ -1871,6 +1917,7 @@ struct SettingsView: View {
     private func confirmInstall() {
         do {
             try HookServer.shared.writeClaudeHooks()
+            UserDefaults.standard.set(true, forKey: Self.jeslyForkHooksOwnerKey)
             showDiff = false
             statusMessage = String(localized: "status.hooks-installed-settings")
             pendingHookJSON = ""
@@ -1883,6 +1930,7 @@ struct SettingsView: View {
     private func uninstallHooks() {
         do {
             try HookServer.shared.uninstallClaudeHooks()
+            UserDefaults.standard.set(false, forKey: Self.jeslyForkHooksOwnerKey)
             statusMessage = String(localized: "status.hooks-removed")
         } catch {
             statusMessage = "❌ \(error.localizedDescription)"

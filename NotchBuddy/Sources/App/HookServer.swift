@@ -29,6 +29,12 @@ final class HookServer: @unchecked Sendable {
     // App Store build derives the command from the panel-selected claudeURL in buildHooksData(claudeURL:).
     static var hookScriptPath: String { supportDir.appendingPathComponent("nb-hook").path }
 
+    /// Clave (UserDefaults) que marca si, al arrancar, el socket nb.sock ya
+    /// lo tenía otra app. Se limpia en cada arranque y solo se pone a true
+    /// cuando la guarda de `serverThread()` no toma el socket. La lee
+    /// Ajustes → Agents para avisar en pantalla (el NSLog solo no basta).
+    static let socketTakenKey = "jeslySocketTakenByOtherApp"
+
     // No approval blocking state — notch is notification-only, user answers in VS Code
 
     private static let maxPayload = 1_048_576          // 1 MB — reject oversized messages
@@ -457,6 +463,9 @@ final class HookServer: @unchecked Sendable {
     // MARK: - Start
 
     func start() {
+        // Fase 6: la marca del socket se limpia en cada arranque; solo la
+        // guarda de serverThread() la pone a true.
+        UserDefaults.standard.set(false, forKey: Self.socketTakenKey)
         // Ensure support directory exists (mode 0700 — not world-readable)
         let dir = Self.supportDir
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -469,12 +478,44 @@ final class HookServer: @unchecked Sendable {
 
     // MARK: - Socket server (background thread)
 
+    /// True cuando un servidor vivo ya escucha en nuestro socket.
+    /// Un archivo huérfano (dueño caído) rechaza la conexión, así que
+    /// un connect fallido significa que la ruta está libre. Best-effort:
+    /// si la sonda misma falla, se sigue el camino de siempre.
+    private static func socketOwnedByOtherApp() -> Bool {
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard fd >= 0 else { return false }
+        defer { close(fd) }
+        var addr = sockaddr_un()
+        addr.sun_family = sa_family_t(AF_UNIX)
+        let cpath = Array(socketPath.utf8CString)
+        withUnsafeMutableBytes(of: &addr.sun_path) { raw in
+            for (i, c) in cpath.enumerated() where i < raw.count { raw[i] = UInt8(bitPattern: c) }
+        }
+        let rc = withUnsafePointer(to: &addr) { ptr in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { Darwin.connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
+        }
+        return rc == 0
+    }
+
     private func serverThread() {
         let path = Self.socketPath
         // sun_path on macOS is 104 bytes including the NUL terminator → max 103 usable bytes
         let maxSunPathBytes = MemoryLayout<sockaddr_un>.size - MemoryLayout<sa_family_t>.size - 1
         guard path.utf8.count <= maxSunPathBytes else {
             NSLog("HookServer: socket path too long (\(path.utf8.count) bytes, max \(maxSunPathBytes)): \(path)")
+            return
+        }
+        // Fase 6: no robar el socket en silencio. Coucou original y este
+        // fork comparten la ruta nb.sock: sin esta guarda, la última app
+        // que arranca borra el socket de la otra y se queda con todos
+        // los eventos de Claude Code, dejándola ciega sin aviso. Si un
+        // servidor vivo ya responde, no se toca: el dueño sigue siendo
+        // la otra app (las funciones de JESLY no usan este socket y
+        // siguen funcionando). La marca queda para Ajustes → Agents.
+        if Self.socketOwnedByOtherApp() {
+            NSLog("HookServer: nb.sock already owned by another app; not taking over")
+            UserDefaults.standard.set(true, forKey: Self.socketTakenKey)
             return
         }
         try? FileManager.default.removeItem(atPath: path)

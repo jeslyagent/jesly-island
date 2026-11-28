@@ -1377,3 +1377,303 @@ Coucou hasta entonces). Pendientes sueltos: quitar el paso
 los instaladores de hooks de los agentes quitados siguen en el
 código como funciones sin uso desde Ajustes (limpieza posterior);
 `AgyPermissionRules` queda sin uso tras borrar `agyApprovalGate`.
+
+## §19. FASE 6, SESIÓN 1 — Plan de verificación en vivo + conflicto de hooks
+
+### 19.1 El conflicto de hooks: hallazgos (medidos, no supuestos)
+
+1. **La isla actual de JESLY NO instala hooks.** Búsqueda en todo
+   `jeslyagent/Jesly-agent-ai` (HEAD de trabajo, conector GitHub):
+   0 referencias a `settings.json`, a `.claude`, a `nb-hook` y a
+   `claude` en `apps/island/`. La isla solo habla con su API por
+   HTTP. **No hay conflicto fork ↔ isla actual.** Las dos pueden
+   correr a la vez: comparten la API (`127.0.0.1:3000`) y la clave
+   del llavero (`com.jesly.island`, la misma, solo lectura), y ven
+   las mismas propuestas. Dos matices: las reglas "Siempre" son por
+   app (UserDefaults distintos por bundle id), así que una regla
+   creada en el fork no auto-aprueba en la isla y viceversa; y si
+   las dos están abiertas, conviene actuar solo en una para no
+   confundirse (aprobar en una se refleja en la otra en el sondeo
+   de 5 s).
+2. **El conflicto real es fork ↔ Coucou original.** El fork todavía
+   usa las rutas EXACTAS de upstream (renombre aplazado, ver
+   FORK-NOTAS.md): support dir `Application Support/NotchBuddy`,
+   socket `nb.sock`, script `nb-hook`, entradas en
+   `~/.claude/settings.json` (+ `~/.gemini/settings.json` y
+   `~/.config/muse/settings.json`). Tres mecanismos silenciosos:
+   - **Robo de socket al arrancar.** `HookServer.start()` llama a
+     `installHookScript()` y `serverThread()` hace `removeItem` del
+     socket y vuelve a enlazarlo. La última app que arranca se queda
+     con TODOS los eventos de Claude Code y la otra queda ciega, sin
+     ningún aviso.
+   - **Reescritura del script en cada arranque.** `start()` escribe
+     `nb-hook` + `nb-hook.py` en el support dir compartido. Si el
+     relay embebido del fork diverge alguna vez del de upstream, las
+     dos apps se pisan el script en cada arranque.
+   - **`settings.json` no distingue dueña.** El fork y Coucou
+     original escriben el mismo comando nb-hook; `claudeHooksInstalled()`
+     devuelve true para cualquiera de las dos. Instalar desde el fork
+     con los hooks de Coucou puestos es un no-op en el archivo, pero
+     el socket pasa al fork al arrancar.
+3. **Las funciones de JESLY no necesitan hooks.** Propuestas, chat,
+   voz, ojos, workflows, habilidades, recordatorios, investigación,
+   cuentas y resumen van por la API, nunca por nb-hook. Los hooks
+   solo alimentan las pills de sesiones CLI (VS Code, Cursor,
+   Codex, Gemini CLI). Sin hooks instalados, JESLY funciona
+   completo y las pills CLI simplemente no ven sesiones.
+
+### 19.2 Solución propuesta (decisión de JC)
+
+- **A. Recomendada: hooks APAGADOS por defecto en el fork.** No
+  instalar los hooks de Claude (ni Gemini/Codex) hasta que JC
+  confirme que vigila sesiones de terminal en el fork. JESLY
+  funciona completo sin ellos. Si un día los quiere, los instala
+  desde Ajustes → Agents con la guarda de abajo, cerrando antes
+  Coucou original.
+- **B. Renombrar las rutas a `jesly-*` (sesión posterior).**
+  `jesly-hook`, `jesly.sock`, `~/.claude/jesly/`, support dir
+  `JeslyIsland`. Entonces fork y Coucou podrían coexistir como
+  dueños distintos — PERO Claude Code dispararía AMBOS hooks por
+  evento (dos entradas en `settings.json`) y un permiso podría
+  responderse dos veces o en carrera. No se recomienda sin probarlo;
+  la regla de una sola dueña seguiría mandando.
+- **C. Traspaso explícito.** "Hacerse dueña" desde la alerta de
+  instalación: se instalan los hooks del fork y se cierra la otra
+  app. Es la opción A con el fork como dueña.
+
+**Lo implementado en esta sesión (sin instalar ningún hook):**
+- Guarda del socket en `HookServer.serverThread()`: antes de borrar
+  y enlazar `nb.sock`, sondea si un servidor vivo ya responde; si
+  responde, NO toma el socket (log + marca en UserDefaults
+  `jeslySocketTakenByOtherApp`, que se limpia en cada arranque).
+  Un archivo huérfano (dueño caído) rechaza la conexión y se sigue
+  el camino de siempre.
+- Alerta al instalar en `SettingsView.installHooks()`: si
+  `settings.json` ya tiene entradas nb-hook y no las instaló este
+  fork (marca propia `jeslyForkHooksInstalled`, que se pone al
+  instalar y se quita al desinstalar), muestra la alerta "Los hooks
+  ya tienen dueña" con las dos opciones (Mantener la otra app /
+  Hacerse dueña). Sin la marca no se puede distinguir por contenido.
+- Aviso visible en Ajustes → Agents (sección Claude): si al
+  arrancar el socket ya lo tenía otra app, muestra que este fork no
+  ve las sesiones de Claude Code y que hay que cerrar la otra app y
+  reiniciar el fork. Sin este aviso la pill diría "instalado" y no
+  llegaría ningún evento.
+- Archivos: `App/HookServer.swift` (guarda + marca),
+  `App/SettingsView.swift` (alerta + aviso + marca de dueña).
+  Verificación sin compilar: balance 0 en los 2 (escáner
+  Swift-aware; el -6 de paréntesis de `HookServer.swift` es ruido
+  del escáner, idéntico en el archivo base upstream); sin
+  referencias rotas (grep). **Sin compilar: solo la Mac lo
+  confirma.** Los instaladores de Gemini/Codex/Muse comparten el
+  mismo nb-hook y el mismo socket, así que la guarda del socket los
+  cubre en el mecanismo; sus alertas propias quedan como follow-up.
+
+### 19.3 Plan de verificación en vivo (API arrancada)
+
+Hasta ahora TODAS las verificaciones fueron con la API apagada (0
+propuestas sin errores). Esta es la primera con la API arrancada.
+Orden de los pasos: stack → pill activa → crear propuestas →
+permiso → aplicar → verificar/publicar → chat → voz → ojos →
+workflows/habilidades/recordatorios → investigar → cuentas/resumen
+→ limpieza. Un paso por vez; si uno falla, se anota y se sigue con
+el siguiente, no se salta al final.
+
+**Pre-requisitos.** Fork en el HEAD de esta sesión (pull +
+`xcodegen` + Shift+Cmd+K + Cmd+B + Cmd+R, bloque de siempre). La
+isla actual de JESLY cerrada durante la prueba (no por conflicto,
+sino para no actuar dos veces sobre la misma propuesta). Coucou
+original cerrado si lo usa (si no, el fork no recibe sesiones CLI;
+con la guarda nueva, el fork NO le roba el socket y lo avisa en
+Ajustes → Agents). Repo JESLY en la Mac: `~/Downloads/jesly-ia`
+(la carpeta de siempre; si ya cambió el remoto al repo nuevo, es
+la misma carpeta). Docker Desktop abierto.
+
+**Paso 0 — Clave para los curl.** Desde la raíz del repo:
+`KEY=$(grep '^JESLY_API_KEY=' .env | cut -d= -f2)`. Si el `.env`
+tiene la clave, TODOS los `/v1/*` exigen
+`-H "Authorization: Bearer $KEY"` (401 sin ella); si no tiene
+clave, `/v1` queda abierto solo en localhost y se omite la
+cabecera. La misma clave es la que el fork lee del llavero
+(`com.jesly.island`, ya guardada en Ajustes → JESLY en la Fase 3):
+si el fork muestra "API no responde" con la API arriba, lo primero
+es comprobar que la clave del llavero coincide con la del `.env`.
+
+**Paso 1 — Arrancar el stack.** Desde la raíz del repo:
+`bash scripts/arrancar-todo.sh`. Levanta Postgres (5433, Docker;
+el compose dice 5432 pero la copia local de JC lo tiene en 5433),
+Ollama nativo (11434), API (3000), STT (3001), TTS (3002) y Web
+(3003). Debe terminar con la tabla y TODO ARRIBA (exit 0). Si algo
+sale FALLO, mirar `logs/<servicio>.log`. Comprobar:
+`curl -s http://127.0.0.1:3000/health` → `{"ok":true}`; y
+`curl -s http://127.0.0.1:3000/v1/system/status -H "Authorization: Bearer $KEY"`
+para ver qué proveedores están `up` (Ollama debe estar `up` para
+el chat automático).
+
+**Paso 2 — Activar la pill JESLY.** En el fork: Ajustes → Active
+pills → activar JESLY (`jesly_propuestas`). Las activas por defecto
+son solo Vercel + GitHub (2 de 4 huecos), así que no hay que
+desactivar nada. El sondeo solo corre con la pill activa: sin ella,
+la pill muestra 0 propuestas aunque la API tenga. Debe verse 0
+propuestas (todavía no hay ninguna).
+
+**Paso 3 — Crear 4 propuestas reales.** Desde la raíz del repo,
+con el `KEY` del paso 0. La primera CON parche (camino principal),
+las otras tres SIN parche (para Ejecutar, Denegar y Siempre).
+Plantilla (guardar en `/tmp/propuesta-fork.json` y enviar con
+`curl -s -X POST http://127.0.0.1:3000/v1/tasks -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' -d @/tmp/propuesta-fork.json`):
+`{"title":"Prueba en vivo del fork (Fase 6): añadir nota de verificación","kind":"propuesta","agent_id":"mac","proposal":"Crear el archivo docs/verificacion-fork-2026-11-27.md con una línea que marca la verificación en vivo del fork JESLY Island (Fase 6). No toca código ni configuración.","patch":"--- /dev/null\n+++ b/docs/verificacion-fork-2026-11-27.md\n@@ -0,0 +1 @@\n+Verificación en vivo del fork JESLY Island — Fase 6, 2026-11-27.\n"}`.
+Debe responder 201 con la tarea (anotar su `id`). Un 400 es el
+parche inválido o un campo mal formado, no un fallo del fork. Las
+otras tres: mismo JSON cambiando `title` y `proposal` y SIN la
+clave `patch` ("Propuesta B: escribir la misma nota sin parche",
+"Propuesta C: denegar esta propuesta de prueba", "Propuesta D:
+probar la regla Siempre"). Comprobar en el fork que la pill JESLY
+marca 4 (puede tardar un sondeo de 5 s).
+
+**Paso 4 — Tarjeta de permiso (propuesta A).** En ≤5 s la isla
+muestra la tarjeta de permiso de la propuesta A: título, agente
+`mac`, botones Permitir / Denegar / Siempre. Si no aparece: volver
+al home y esperar un sondeo; comprobar con
+`curl -s "http://127.0.0.1:3000/v1/tasks?status=esperando_aprobacion&kind=propuesta" -H "Authorization: Bearer $KEY"`
+que la API la tiene. Tocar **Permitir**. Debe verse: la tarjeta
+pasa a sesión en vivo (paso 5). Si toca Denegar por error, la
+propuesta pasa a cancelada y hay que crear otra (paso 3).
+
+**Paso 5 — Aplicar + sesión en vivo (propuesta A).** La tarjeta de
+sesión en vivo muestra "Sesión en vivo", la rama
+`jesly-test/<id-corto>` y el diff real (archivo +1 −0) con los
+pasos. Tocar **Aplicar**. Debe verse: la tarea pasa a aplicada.
+Comprobar en la terminal (repo JESLY):
+`git branch --list 'jesly-test/*'` muestra la rama;
+`ls ~/.cache/jesly/worktrees/<id-corto>/docs/verificacion-fork-2026-11-27.md`
+existe; y el checkout principal NO tiene el archivo
+(`test -f docs/verificacion-fork-2026-11-27.md` en la raíz del repo
+debe dar que no existe). Si Aplicar responde 400, leer el motivo:
+la tarea queda en planificada (p. ej. fallo de git) y no es un
+fallo de la tarjeta.
+
+**Paso 6 — Verificar y Publicar (propuesta A, aplicada).** En la
+tarjeta: **Verificar** (el fork manda las comprobaciones locales
+por defecto: health de 127.0.0.1:3000 y 127.0.0.1:3003) → debe
+verse el resumen del veredicto; un veredicto con fallos llega como
+200 con el informe, no como error. **Publicar** → empuja la rama
+de prueba a GitHub y NUNCA fusiona a main. Comprobar:
+`git branch -r --list 'origin/jesly-test/*'` muestra la rama, y en
+github.com/jeslyagent/Jesly-agent-ai existe la rama
+`jesly-test/<id-corto>`. **Revertir** → borra rama + worktree:
+`git branch --list 'jesly-test/*'` vacío y
+`~/.cache/jesly/worktrees/<id-corto>` ya no existe. La tarea queda
+en revertida.
+
+**Paso 7 — Chat con modelo real.** Abrir el chat de JESLY (pill
+`jesly_chat` → "Chat with JESLY" o la flecha ↗). Enviar: "Hola,
+¿qué modelo eres?". Debe verse la respuesta con "proveedor ·
+modelo" REAL debajo (p. ej. `ollama-local · qwen3:8b`). Probar el
+chip de proveedor (Automático → Ollama → FreeLLMAPI → Groq →
+Gemini → OpenRouter): FreeLLMAPI solo responde si su contenedor
+Docker está arrancado (puerto 3101, no lo levanta
+`arrancar-todo.sh`); si no está, el router usa otro proveedor y la
+insignia muestra el que respondió de verdad. Sin ningún proveedor
+arriba, el chat muestra el error claro de la isla: es el
+comportamiento esperado, no un fallo del fork.
+
+**Paso 8 — Voz.** a) **Micrófono manual:** en el chat, tocar el
+micrófono, hablar, y comprobar que transcribe (STT 3001), responde
+por chat y suena la voz (TTS 3002); tocar ■ para interrumpir.
+b) **"Oye JESLY":** en otra terminal, desde la raíz del repo:
+`bash scripts/arrancar-wake-word.sh` (comprueba la salud de
+API/STT/TTS antes de arrancar; log en `logs/wake-word.log`).
+Decir "Oye JESLY" a distancia normal → pitido → hablar → respuesta
+por voz. La isla muestra el estado del demonio ("Escuchando" /
+"Escucha en pausa"). La primera vez macOS pide permiso de
+micrófono para la Terminal: pulsar Permitir (si se denegó:
+Ajustes del Sistema → Privacidad y seguridad → Micrófono →
+Terminal). Parar con `bash scripts/parar-wake-word.sh`. Si el
+demonio no está instalado en la Mac (sin venv ni modelo Vosk), este
+apartado se salta y se anota como pendiente: la isla muestra
+"Escucha en pausa" y nada se rompe.
+
+**Paso 9 — Ojos.** Arrastrar una imagen (p. ej. una captura) a la
+zona punteada del chat y enviar. Debe verse la insignia "Vio:
+proveedor / modelo". Límites del servidor (validados antes de
+enviar): imágenes 10 MB, vídeos 50 MB, máx. 4 adjuntos y 1 vídeo
+por mensaje. Un archivo mayor se rechaza antes de enviar.
+
+**Paso 10 — Workflows, habilidades, recordatorios.** Ajustes →
+JESLY. **Workflows:** la lista carga (incluye "Resumen diario —
+buenos días" si está programado). Ejecutar uno: crea una tarea y
+su progreso se ve en la tarjeta de sesión en vivo. Probar
+Pausar/Reanudar y Borrar en uno de prueba. **Habilidades:** la
+lista carga; si hay alguna "en revisión", Probar / Aprobar /
+Rechazar; si hay instalada, Desinstalar. Lista vacía = válido si
+JC no tiene habilidades instaladas (instalar desde manifiesto aún
+no lo soporta la isla). **Recordatorios:** escribir "Recuérdame en
+2 minutos que revise la prueba del fork" → Crear → aparece con
+fecha y estado pendiente → **Hecho** → estado silenciado (el botón
+llama a silenciar el workflow, no hay endpoint "hecho"). Opcional:
+esperar los 2 minutos y comprobar que suena.
+
+**Paso 11 — Investigación profunda.** En el chat, tocar la lupa:
+el campo dice "Investiga en la web…". Preguntar algo con respuesta
+en la web (p. ej. "¿Qué avances hubo en computación cuántica en
+2026?"). Debe llegar el informe con las fuentes como enlaces (✓
+verificada / ! no verificada) y la línea "Investigación ·
+modelo/extractiva · N fuentes · M verificadas · fecha". No se
+puede cancelar en vuelo; más de 1000 caracteres responde 400 del
+servidor.
+
+**Paso 12 — Cuentas conectadas y resumen diario.** Ajustes →
+JESLY. **Cuentas conectadas:** muestra Google/GitHub con scopes y
+expiración si JC las conectó; lista vacía = esperado si nunca las
+conectó desde la isla (conectarlas no es parte de esta prueba).
+**Resumen diario:** "Ver el de hoy" → vista previa con contadores;
+programar una hora → el workflow "Resumen diario — buenos días"
+aparece en la lista de Workflows con su horario; Apagar → lo borra
+(404 si no había ninguno).
+
+**Paso 13 — Limpieza.** En Ajustes → JESLY, **Revocar** la regla
+"Siempre" creada en la propuesta D (si no, seguirá auto-aprobando
+propuestas del agente `mac`). Parar el demonio de voz
+(`bash scripts/parar-wake-word.sh`) y, si quiere, todo el stack
+(`bash scripts/parar-todo.sh`). Anotar los ids de las 4 propuestas
+y su estado final (A: revertida tras publicar; B: aplicada por
+ejecutar o planificada si el agente no escribió nada; C:
+cancelada; D: aprobada por Siempre + regla revocada). Mandar el
+resultado: qué pasos pasaron y cuáles fallaron, con el mensaje
+exacto que se vio.
+
+### 19.4 Si algo no se ve (diagnóstico rápido)
+
+- Pill JESLY en 0 con la API arriba → la pill no está activa
+  (paso 2) o la clave del llavero no coincide con el `.env` (401:
+  el sondeo marca `apiReachable = false` con el motivo).
+- La tarjeta no aparece → esperar un sondeo (5 s) o volver al
+  home; la tarjeta no roba otras vistas. Comprobar la propuesta con
+  el curl del paso 4.
+- Aplicar 400 → leer el motivo en la tarjeta o en `logs/api.log`:
+  la tarea queda en planificada.
+- Chat sin respuesta → `curl /v1/system/status`: ningún proveedor
+  `up` (Ollama apagado o sin modelo `qwen3:8b`).
+- "Escucha en pausa" → el demonio Vosk no corre (paso 8b).
+- Sesiones CLI (VS Code/Cursor/Codex/Gemini) vacías con los hooks
+  instalados → otra app es dueña del socket (aviso en Ajustes →
+  Agents, §19.2); cerrar la otra app y reiniciar el fork.
+- BUILD FAILED con errores fantasma tras el pull → `xcodegen` +
+  Shift+Cmd+K antes de tocar código (lección de la Fase 2).
+
+### 19.5 Para la Fase 6, sesión 2
+
+Aplicar la decisión de JC sobre los hooks (§19.2): si es la A,
+nada más (quizá la misma alerta en los instaladores de
+Gemini/Codex/Muse, que comparten nb-hook y socket); si es la B,
+la sesión de renombre a `jesly-*` (con su prueba de coexistencia);
+si es la C, verificar el traspaso en vivo (instalar desde el fork
+con Coucou corriendo → alerta → hacerse dueña → Coucou deja de
+ver sesiones). Probar la guarda del socket en vivo (arrancar el
+fork con Coucou corriendo → aviso en Ajustes → Agents y el fork no
+roba el socket). Pendientes sueltos: quitar el paso "Wardrobe
+tests" de `.github/workflows/build.yml` en el remoto (la App no
+puede, 403); las 3 decisiones de `PRODUCT_NAME`/bundle id; los
+instaladores de hooks de los agentes quitados siguen en el código
+como funciones sin uso desde Ajustes (limpieza posterior).

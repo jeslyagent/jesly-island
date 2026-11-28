@@ -1049,3 +1049,92 @@ ningún otro `else {` huérfano en los archivos tocados.
 (agentes Copilot y Muse ya no existen) quedó su único uso en el timeout de
 seguridad de la cola de permisos. Corrección: timeout fijo de 115 s, sin la
 rama de 110 s que era solo para esos dos agentes.
+
+## FASE 6, SESIÓN 1 — Plan de verificación en vivo + conflicto de hooks (2026-11-27, local, SIN pushear, SIN compilar)
+
+Fase 5 verificada completa en la Mac de JC antes de empezar (sesión 3:
+24 pills quitadas, quedan 9; HEAD remoto `0650ee9b`). El plan completo
+y ordenado está en `README-FASE2.md` §19; aquí el resumen.
+
+### 1. El conflicto de hooks: hallazgos
+
+- **La isla actual NO instala hooks.** Búsqueda en todo
+  `jeslyagent/Jesly-agent-ai`: 0 referencias a `settings.json`,
+  `.claude`, `nb-hook` o `claude` en `apps/island/`. Solo habla con
+  su API por HTTP. **No hay conflicto fork ↔ isla actual**: pueden
+  correr a la vez (misma API, misma clave de llavero, mismas
+  propuestas); solo las reglas "Siempre" son por app (UserDefaults
+  distintos), y conviene actuar solo en una para no confundirse.
+- **El conflicto real es fork ↔ Coucou original.** El fork usa las
+  rutas EXACTAS de upstream (renombre aplazado): support dir
+  `NotchBuddy`, socket `nb.sock`, script `nb-hook`, entradas en
+  `~/.claude/settings.json` (+ Gemini y Muse). Tres mecanismos
+  silenciosos: (1) **robo de socket al arrancar** — `start()` borra
+  y re-enlaza `nb.sock`, la última app que arranca se queda con
+  todos los eventos; (2) **reescritura del script en cada arranque**
+  — `installHookScript()` escribe `nb-hook`/`nb-hook.py` en el dir
+  compartido; (3) **`settings.json` no distingue dueña** — el fork
+  y Coucou escriben el mismo comando, `claudeHooksInstalled()` da
+  true para cualquiera.
+- **JESLY no necesita hooks.** Todo va por la API; los hooks solo
+  alimentan las pills de sesiones CLI (VS Code, Cursor, Codex,
+  Gemini CLI).
+
+### 2. Solución propuesta (decisión de JC)
+
+- **A. Recomendada: hooks APAGADOS por defecto.** No instalarlos
+  hasta que JC confirme que vigila sesiones de terminal en el fork.
+- **B. Renombrar a `jesly-*`** (sesión posterior): `jesly-hook`,
+  `jesly.sock`, `~/.claude/jesly/`. Pero Claude Code dispararía
+  AMBOS hooks por evento (dos entradas) y un permiso podría
+  responderse dos veces: no recomendado sin probarlo.
+- **C. Traspaso explícito:** "Hacerse dueña" desde la alerta,
+  cerrando la otra app.
+
+### 3. Código implementado en esta sesión (sin instalar hooks)
+
+- `App/HookServer.swift`: guarda del socket en `serverThread()` —
+  antes de borrar y enlazar `nb.sock`, sondea si un servidor vivo
+  ya responde; si responde, NO toma el socket (log + marca
+  `jeslySocketTakenByOtherApp` en UserDefaults, limpia en cada
+  arranque). Archivo huérfano = se sigue el camino de siempre.
+  Clave `socketTakenKey`.
+- `App/SettingsView.swift`: alerta "Los hooks ya tienen dueña" en
+  `installHooks()` si `settings.json` ya tiene nb-hook y no lo
+  instaló este fork (marca propia `jeslyForkHooksInstalled`: se
+  pone al instalar, se quita al desinstalar); aviso visible en
+  Ajustes → Agents cuando el socket lo tenía otra app al arrancar.
+- Verificación sin compilar: balance 0 en los 2 archivos (el -6 de
+  paréntesis de `HookServer.swift` es ruido del escáner, idéntico en
+  el archivo base upstream); sin referencias rotas (grep).
+  **Sin compilar: solo la Mac lo confirma.** Los instaladores de
+  Gemini/Codex/Muse comparten nb-hook y socket: la guarda del
+  socket los cubre en el mecanismo; sus alertas propias quedan
+  como follow-up.
+
+### 4. Plan de verificación en vivo (resumen)
+
+Detalle completo en `README-FASE2.md` §19.3. Stack con
+`bash scripts/arrancar-todo.sh` (Postgres 5433, Ollama 11434, API
+3000, STT 3001, TTS 3002, Web 3003); activar la pill JESLY;
+crear 4 propuestas por `POST /v1/tasks` (A con parche que crea
+`docs/verificacion-fork-2026-11-27.md`, B/C/D sin parche;
+`agent_id: "mac"`, clave Bearer del `.env` si existe); Permitir →
+Aplicar (rama `jesly-test/<id-corto>`, worktree en
+`~/.cache/jesly/worktrees/<id-corto>`, main intacto) → Verificar
+(checks locales 3000+3003) → Publicar (push de la rama, nunca
+merge a main) → Revertir (borra rama + worktree); chat con modelo
+real; voz manual + demonio Vosk (`arrancar-wake-word.sh`); ojos
+(soltar imagen, insignia "Vio: proveedor / modelo"); workflows /
+habilidades / recordatorios; lupa de investigación; cuentas y
+resumen diario; limpieza (revocar la regla "Siempre", parar el
+demonio y el stack).
+
+### 5. Para la Fase 6, sesión 2
+
+Aplicar la decisión de JC (§2); probar la guarda en vivo (fork con
+Coucou corriendo → aviso en Ajustes → Agents, sin robo de socket;
+instalar → alerta → hacerse dueña). Pendientes sueltos: quitar el
+paso "Wardrobe tests" de `.github/workflows/build.yml` (403); las 3
+decisiones de `PRODUCT_NAME`/bundle id; instaladores de hooks de
+agentes quitados como código muerto (limpieza posterior).
