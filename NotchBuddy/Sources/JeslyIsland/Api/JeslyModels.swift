@@ -36,6 +36,15 @@ public struct JeslyTask: Codable, Identifiable, Equatable {
     public var createdAt: String?
     public var updatedAt: String?
 
+    /// Claves explícitas: al escribir `init(from:)` a mano el
+    /// compilador ya NO sintetiza `CodingKeys` y hay que declararlo
+    /// (sin esto: "Cannot find type 'CodingKeys' in scope").
+    /// Los valores van en camelCase: el decoder usa
+    /// `convertFromSnakeCase` y los casa con `agent_id`, etc.
+    private enum CodingKeys: String, CodingKey {
+        case id, title, status, plan, result, agentId, kind, proposal, patch, branch, commitSha, createdAt, updatedAt
+    }
+
     /// Decodificación tolerante del `plan` (corrección Fase 6,
     /// verificación en vivo 2026-11-27): el servidor lo devuelve
     /// como LISTA JSON (`routes/tasks.ts:210`:
