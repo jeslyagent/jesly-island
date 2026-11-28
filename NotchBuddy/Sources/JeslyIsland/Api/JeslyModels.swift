@@ -36,6 +36,48 @@ public struct JeslyTask: Codable, Identifiable, Equatable {
     public var createdAt: String?
     public var updatedAt: String?
 
+    /// Decodificación tolerante del `plan` (corrección Fase 6,
+    /// verificación en vivo 2026-11-27): el servidor lo devuelve
+    /// como LISTA JSON (`routes/tasks.ts:210`:
+    /// `Array.isArray(req.body?.plan) ? req.body.plan : []`,
+    /// guardado con `JSON.stringify`), mientras este modelo lo
+    /// declaraba `String?`. JSONDecoder no decodifica un array
+    /// como `String?`: fallaba TODA la respuesta `TasksResponse`,
+    /// el poller marcaba `apiReachable=false`, las listas quedaban
+    /// vacías, la pill marcaba 0 y la tarjeta de permiso nunca
+    /// aparecía aunque la API tuviera propuestas. `plan` sigue
+    /// siendo `String?` por fuera: texto directo → tal cual;
+    /// lista de textos → unidos por líneas; cualquier otra forma
+    /// (lista de objetos, null, ausente) → nil, sin fallar.
+    /// El resto de campos se decodifica igual que antes.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        status = try container.decode(String.self, forKey: .status)
+        plan = Self.decodePlan(from: container)
+        result = try container.decodeIfPresent(String.self, forKey: .result)
+        agentId = try container.decodeIfPresent(String.self, forKey: .agentId)
+        kind = try container.decode(String.self, forKey: .kind)
+        proposal = try container.decodeIfPresent(String.self, forKey: .proposal)
+        patch = try container.decodeIfPresent(String.self, forKey: .patch)
+        branch = try container.decodeIfPresent(String.self, forKey: .branch)
+        commitSha = try container.decodeIfPresent(String.self, forKey: .commitSha)
+        createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt)
+        updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
+    }
+
+    private static func decodePlan(from container: KeyedDecodingContainer<CodingKeys>) -> String? {
+        if let text = try? container.decode(String.self, forKey: .plan) {
+            return text
+        }
+        if let steps = try? container.decode([String].self, forKey: .plan) {
+            let joined = steps.filter { !$0.isEmpty }.joined(separator: "\n")
+            return joined.isEmpty ? nil : joined
+        }
+        return nil
+    }
+
     /// true solo si hay un parche que aplicar en rama de prueba.
     public var hasPatch: Bool { (patch ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }
 

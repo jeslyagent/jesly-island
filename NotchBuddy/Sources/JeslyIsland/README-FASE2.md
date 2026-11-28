@@ -1749,3 +1749,71 @@ socket ni reescribe el script; instalar desde el fork → alerta "Los
 hooks ya tienen dueña"). Pendientes sueltos: quitar el paso "Wardrobe
 tests" de `.github/workflows/build.yml` en el remoto (la App no
 puede, 403); las 3 decisiones de `PRODUCT_NAME`/bundle id.
+
+## §21. FASE 6 — CORRECCIÓN: `plan` es lista en el servidor, texto en el modelo
+
+### 21.1 Bug confirmado en vivo (2026-11-27)
+
+Durante la verificación en vivo de 14 pasos (§19.3), la tarjeta de
+permiso nunca apareció aunque la API tenía 4 propuestas en
+`esperando_aprobacion` (verificado por curl: A `bd3a05f2`, B
+`28f62b0f`, C `1ed2617f`, D `3ab0da36`). La clave sí estaba guardada
+en el llavero (33 caracteres medidos), el stack estaba todo arriba
+y el sondeo está bien cableado. La causa era el modelo, no la clave
+ni el sondeo.
+
+Evidencia del servidor (`apps/api/src/routes/tasks.ts`, repo
+`jeslyagent/Jesly-agent-ai`):
+
+- Línea 71: `plan: unknown;`
+- Línea 210: `const plan = Array.isArray(req.body?.plan) ? req.body.plan : [];`
+- Línea 282: `JSON.stringify(plan)` (se guarda como lista JSON)
+
+El curl real devuelve `"plan":[]`. Pero el fork declaraba en
+`JeslyModels.swift:27` `public var plan: String?`. JSONDecoder no
+puede decodificar un array como `String?`: fallaba TODA la
+respuesta `TasksResponse`, el poller marcaba `apiReachable=false`,
+las listas quedaban vacías, la pill marcaba 0 y la tarjeta no
+salía. Es la primera vez que la API devuelve tareas reales; con la
+API apagada nunca se vio.
+
+### 21.2 Corrección (1 archivo)
+
+Solo `NotchBuddy/Sources/JeslyIsland/Api/JeslyModels.swift`:
+`JeslyTask` gana un `init(from:)` personalizado y un
+`decodePlan(from:)` privado. `plan` sigue siendo `String?` por
+fuera — `JeslyProposalCardView.swift:119` no se toca.
+Decodificación: texto directo → tal cual; lista de textos →
+unidos por líneas; cualquier otra forma (lista de objetos, null,
+ausente) → nil, sin fallar. El resto de campos se decodifica igual
+que antes; `encode(to:)` sigue sintetizado y no hay
+construcciones por miembros de `JeslyTask` en el código.
+
+Casos razonados contra el JSON real:
+
+- Tarea A real (`bd3a05f2`, `"plan":[]`, `"result":null`) → `plan`
+  nil; la tarea entra en la lista y la tarjeta puede abrirse.
+- `"plan":["Crear el archivo","Añadir la línea"]` →
+  `"Crear el archivo\nAñadir la línea"`.
+- `"plan":"Revisar y aplicar el parche"` → el mismo texto.
+
+Verificación sin compilar: balance 0 en `JeslyModels.swift`
+(escáner Swift-aware); `task.plan` sigue siendo `String?` en toda
+la UI. **Sin compilar: solo la Mac lo confirma.** Sospechoso si
+falla: el `init(from:)` personalizado o el `decodePlan`.
+
+### 21.3 Hallazgo pendiente (otro repo)
+
+La isla actual (`jeslyagent/Jesly-agent-ai`,
+`apps/island/Sources/JeslyIsland/Api/JeslyModels.swift`, HEAD
+`3e2a59db`) tiene el mismo modelo portado verbatim y por tanto el
+mismo bug. Anotado en `FORK-NOTAS.md`; la corrección en ese repo
+es trabajo aparte.
+
+### 21.4 Para retomar la verificación en vivo
+
+Tras el pull + build en la Mac de JC, la verificación de 14 pasos
+(§19.3) se retoma en el **paso 4** (tarjeta de permiso): la pill
+JESLY debe marcar **4** y la tarjeta de la propuesta A debe
+abrirse sola. Las 4 propuestas siguen en `esperando_aprobacion`
+en la API; no hay que recrearlas.

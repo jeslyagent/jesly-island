@@ -1191,3 +1191,90 @@ con Coucou corriendo → aviso, sin robo de socket ni reescritura del
 script; instalar → alerta "Los hooks ya tienen dueña"). Pendientes
 sueltos: quitar el paso "Wardrobe tests" de `.github/workflows/build.yml`
 (403); las 3 decisiones de `PRODUCT_NAME`/bundle id.
+
+## FASE 6 — CORRECCIÓN: `plan` es lista en el servidor, texto en el modelo (2026-11-27, sin pushear, sin compilar)
+
+### 1. Bug confirmado en vivo
+
+Durante la verificación en vivo de 14 pasos (§19.3), la tarjeta de
+permiso nunca apareció aunque la API tenía 4 propuestas en
+`esperando_aprobacion` (verificado por curl: A `bd3a05f2`, B
+`28f62b0f`, C `1ed2617f`, D `3ab0da36`). La clave sí estaba guardada
+en el llavero (33 caracteres medidos con `security … | wc -c`), el
+stack estaba todo arriba y el sondeo está bien cableado
+(`AppDelegate.setupIsland` arranca poller + store). La causa era el
+modelo, no la clave ni el sondeo.
+
+### 2. Evidencia del servidor
+
+`apps/api/src/routes/tasks.ts` (repo `jeslyagent/Jesly-agent-ai`):
+
+- Línea 71: `plan: unknown;`
+- Línea 210: `const plan = Array.isArray(req.body?.plan) ? req.body.plan : [];`
+- Línea 282: `JSON.stringify(plan)` (se guarda como lista JSON)
+
+El curl real devuelve `"plan":[]`. Pero el fork declaraba en
+`NotchBuddy/Sources/JeslyIsland/Api/JeslyModels.swift:27`
+`public var plan: String?`. JSONDecoder no puede decodificar un
+array como `String?`: fallaba TODA la respuesta `TasksResponse`,
+el poller marcaba `apiReachable=false`, las listas quedaban vacías,
+la pill marcaba 0 y la tarjeta no salía. Es la primera vez que la
+API devuelve tareas reales; con la API apagada nunca se vio.
+
+### 3. Corrección (1 archivo)
+
+Solo `NotchBuddy/Sources/JeslyIsland/Api/JeslyModels.swift`:
+`JeslyTask` gana un `init(from:)` personalizado y un
+`decodePlan(from:)` privado. `plan` sigue siendo `String?` por
+fuera — `JeslyProposalCardView.swift:119` (`if let plan = task.plan,
+!plan.isEmpty { return plan }`) no se toca. Decodificación:
+
+- Texto directo → tal cual.
+- Lista de textos → unidos por líneas (`\n`).
+- Cualquier otra forma (lista de objetos, null, ausente) → nil,
+  sin fallar.
+
+El resto de campos se decodifica igual que antes (id, title,
+status, kind obligatorios; plan, result, agentId, proposal, patch,
+branch, commitSha, createdAt, updatedAt opcionales; el decoder
+sigue usando `convertFromSnakeCase` en `JeslyAPIClient`).
+`encode(to:)` sigue sintetizado (nada codifica un `JeslyTask` en
+el fork) y no hay construcciones por miembros de `JeslyTask` en
+el código (grep: 0), así que el `init(from:)` personalizado no
+rompe ningún llamador.
+
+Casos razonados contra el JSON real (simulados, misma lógica):
+
+- Tarea A real (`bd3a05f2`, `"plan":[]`, `"result":null`) → `plan`
+  nil; el resto decodifica igual que antes. La tarea entra en la
+  lista y la tarjeta puede abrirse.
+- `"plan":["Crear el archivo","Añadir la línea"]` →
+  `"Crear el archivo\nAñadir la línea"`.
+- `"plan":"Revisar y aplicar el parche"` → el mismo texto.
+- Extra: lista de objetos o `plan` ausente → nil.
+
+### 4. Hallazgo pendiente (OTRO REPO, no se corrige aquí)
+
+La isla actual (`jeslyagent/Jesly-agent-ai`,
+`apps/island/Sources/JeslyIsland/Api/JeslyModels.swift`, HEAD
+`3e2a59db`) tiene el mismo modelo portado verbatim y por tanto el
+mismo bug: su `plan: String?` también romperá al decodificar las
+tareas reales. Anotado aquí; la corrección en ese repo es trabajo
+aparte.
+
+### 5. Verificación sin compilar (hecha)
+
+Balance llaves/paréntesis/corchetes **0** en `JeslyModels.swift`
+(escáner Swift-aware); `task.plan` sigue siendo `String?` en toda
+la UI (único uso: `JeslyProposalCardView.swift:119`, sin tocar).
+**Sin compilar: solo la Mac lo confirma.** Sospechoso si falla:
+el `init(from:)` personalizado (p. ej. `CodingKeys` sintetizado)
+o el `decodePlan`.
+
+### 6. Para retomar la verificación en vivo
+
+Tras el pull + build en la Mac de JC, la verificación de 14 pasos
+(§19.3) se retoma en el **paso 4** (tarjeta de permiso): la pill
+JESLY debe marcar **4** y la tarjeta de la propuesta A debe
+abrirse sola. Las 4 propuestas siguen en `esperando_aprobacion`
+en la API; no hay que recrearlas.
