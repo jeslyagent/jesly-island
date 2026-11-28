@@ -1930,3 +1930,54 @@ en el **paso 5** (Aplicar en la propuesta A): la tarjeta de
 sesión debe mostrar las 4 filas Y los botones completos, sin
 spinners girando en los pasos. D, C y B ya fueron decididas por
 JC; A sigue en planificada con su parche.
+
+## §24. FASE 6 — CORRECCIÓN: chat recortado (altura 160) + lista de mensajes invisible
+
+### 24.1 Queja de JC en vivo (2026-11-27)
+
+Pasos 5-6 cerrados (Aplicar y Revertir PASS). JC abrió el chat
+real de JESLY y dijo, textual: "Se ve cortado, se pierden algunas
+cosas y el chat, la barra del chat también se pierde. Ajusta todo
+para que se vea correctamente." En la captura, con altura 160, se
+ven los chips ("Automático", "Oye JESLY · Escucha en pausa"), el
+aviso de API y la zona de soltar archivos; la barra de entrada
+queda cortada en el borde inferior y el área de mensajes no se ve.
+El aviso "La API de JESLY no responde en 127.0.0.1:3000" es
+estado del servidor, no parte de esta corrección.
+
+### 24.2 Defecto 1: altura 160, medida
+
+Contenido fijo de `JeslyChatView` (VStack spacing 6, paddings
+12+14+10): chips ~22 + zona de soltar ~31 + fila de entrada ~44
++ gaps 18 + paddings 36 = ~151; sin mensajes el aviso (~30)
+suma ~181. Cromo fijo de la isla = 52. Con mensajes, el área
+útil debe dejar ~120 pt para la lista: 151 + 120 + 52 = 323.
+**Altura elegida: 330** (igual que la sesión): área útil 278,
+~127 pt de mensajes; con adjuntos o error la lista se estrecha
+pero sigue visible y con scroll.
+
+### 24.3 Defecto 2: la lista se aplasta a 0 sin `isTall`
+
+La altura sola NO basta: la lista es un `ScrollView` con
+`maxHeight: .infinity` dentro del marco fijo de 98 pt de
+`IslandRootView`, donde se aplasta a 0 — los mensajes serían
+invisibles aunque la ventana fuera más alta. `.jeslyChat` se
+declara vista "alta" en el `isTall` de `IslandRootView`, como
+`.prompt` (el otro chat): el marco se vuelve flexible y la lista
+llena el área útil. Las altas inactivas colapsan (minHeight 0),
+igual que `.prompt`. `botY` nil sigue auto-centrando; no rompe
+`botPosition` ni `islandSize`.
+
+### 24.4 Tarjeta de permiso: 160 → 200
+
+`.jeslyProposal` se vio entera en vivo, pero medida con la línea
+de feedback se recorta: ~127 sin feedback, ~146 con feedback,
+contra área útil 108. **Subida a 200** (área útil 148, cubre 2
+líneas + feedback). El contenido va centrado, se ve igual.
+
+### 24.5 Para retomar la verificación en vivo
+
+Tras el pull + build en la Mac de JC, la verificación se retoma
+en el **paso 7** (chat: "Hola, ¿qué modelo eres?" con proveedor
+Automático): el chat debe mostrar chips + aviso + zona de soltar
++ mensajes + barra de entrada completa, sin nada cortado.

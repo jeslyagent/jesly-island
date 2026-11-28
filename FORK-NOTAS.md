@@ -1468,3 +1468,88 @@ propuesta A): la tarjeta de sesión debe mostrar las 4 filas Y
 los botones completos, sin spinners girando en los pasos. Las
 propuestas D (Siempre), C (Denegar) y B (Permitir) ya fueron
 decididas por JC; A sigue en planificada con su parche.
+
+## FASE 6 — CORRECCIÓN: chat recortado (altura 160) + lista de mensajes invisible (2026-11-27, sin pushear, sin compilar)
+
+### 1. Queja de JC en vivo
+
+Tras cerrar los pasos 5-6 (Aplicar + Revertir PASS), JC abrió el
+chat real de JESLY (`JeslyChatView`, vista `.jeslyChat`) y dijo,
+textual: "Se ve cortado, se pierden algunas cosas y el chat, la
+barra del chat también se pierde. Ajusta todo para que se vea
+correctamente." En la captura, con altura 160, se ven los chips
+de arriba ("Automático", "Oye JESLY · Escucha en pausa"), el
+aviso de API y la zona de soltar archivos, pero la barra de
+entrada ("Pregúntale algo a JESLY..." con lupa/micrófono/enviar)
+queda cortada en el borde inferior y el área de mensajes no se ve.
+
+Nota: en la captura también se leía "La API de JESLY no responde
+en 127.0.0.1:3000" — eso es estado del servidor (la API estaba
+abajo en ese momento), NO parte de esta corrección de layout; no
+se tocó en código.
+
+### 2. Defecto 1: altura 160, medida
+
+Medida del contenido real de `JeslyChatView` (VStack spacing 6,
+padding top 12 + bottom 14 + outer bottom 10; cromo fijo de la
+isla = top 8 + cabecera 34 + bottom 10 = 52):
+chips ~22 + zona de soltar ~31 + fila de entrada ~44 + gaps 18 +
+paddings 36 = **~151 fijo**; sin mensajes el aviso (~30, 2 líneas)
+suma ~181. Con mensajes, el área útil debe dejar ~120 pt para la
+lista: 151 + 120 + 52 = 323. **Altura elegida: 330** (igual que la
+sesión): área útil 278, deja ~127 pt de mensajes; con fila de
+adjuntos o línea de error la lista se estrecha pero sigue visible
+y con scroll. `.jeslySession` queda en 330 (ya verificada).
+
+### 3. Defecto 2 (el importante): la lista se aplasta a 0 sin `isTall`
+
+Subir la altura sola NO arregla el chat. La lista de mensajes es
+un `ScrollView` con `maxHeight: .infinity` dentro del marco fijo
+de **98 pt** de `IslandRootView`: en un marco de 98 el ScrollView
+recibe 98 − 141 (contenido fijo) < 0 y se aplasta a 0 — los
+mensajes serían invisibles aunque la ventana fuera más alta.
+Corrección: `.jeslyChat` se declara vista "alta" en el `isTall`
+de `IslandRootView`, como `.prompt` (el otro chat): el marco pasa
+a ser flexible (`maxHeight: .infinity`) y la lista llena el área
+útil. Las vistas altas inactivas colapsan (minHeight 0), igual
+que `.prompt`, así que no empuja el ZStack. `botY` nil sigue
+auto-centrando; la altura no rompe `botPosition` (usa
+`layout(for:)`) ni `islandSize` (devuelve `layout.height` tal
+cual). Pendiente general anotado antes: hacer lo mismo con
+`.jeslySession` en un lote posterior (hoy funciona por desborde
+sin recorte, como se verificó en vivo).
+
+### 4. Tarjeta de permiso: 160 → 200 (medida con feedback)
+
+`.jeslyProposal` se vio entera en vivo (20:59 AST), pero medida
+con la línea de feedback se recorta: cabecera ~22 + cuerpo 2
+líneas ~34 + sub ~15 + botones ~29 + top 4 + gaps 15 + padding 8
+= ~127; con feedback (+~19) = ~146 > área útil 108. **Subida a
+200** (área útil 148, cubre 2 líneas + feedback). El contenido
+va centrado, así que la tarjeta se ve igual, solo con más aire.
+
+### 5. Archivos tocados (solo 2)
+
+- `NotchBuddy/Sources/CoucouKit/IslandTypes.swift`:
+  `.jeslyChat` height 160 → **330** y `.jeslyProposal` 160 →
+  **200** (mismos botX/botY/botDiameter/agentMode), con el
+  desglose de la medida en el comentario.
+- `NotchBuddy/Sources/App/IslandRootView.swift`: `.jeslyChat`
+  añadido al `isTall` junto a `.prompt` + comentario.
+
+### 6. Verificación sin compilar (hecha)
+
+Balance llaves/paréntesis/corchetes **0** en los 2 archivos
+(escáner Swift-aware). **Sin compilar: solo la Mac lo
+confirma.** Sospechosos si fallan: la altura nueva o el `isTall`.
+
+### 7. Para retomar la verificación en vivo
+
+Tras el pull + build en la Mac de JC, la verificación de 14
+pasos (§19.3) se retoma en el **paso 7** (chat: "Hola, ¿qué
+modelo eres?" con proveedor Automático): el chat debe mostrar
+chips + aviso + zona de soltar + mensajes + barra de entrada
+completa, sin nada cortado. Pasos 5-6 ya cerrados (Aplicar y
+Revertir PASS); Ejecutar/Verificar/Publicar y el 404 de
+workflows quedan para el pull grande del servidor (jesly-ia
+atrás 20+ commits, origin/main `3e2a59d`).

@@ -248,8 +248,15 @@ enum IslandConst {
         .empty:     ViewLayout(height: 160, botX: 70,  botY: nil, botDiameter: 62, agentMode: .none),
         .approval:  ViewLayout(height: 160, botX: 62,  botY: nil, botDiameter: 56, agentMode: .column),
         .question:  ViewLayout(height: 160, botX: 62,  botY: nil, botDiameter: 56, agentMode: .column),
-        // JESLY (Fase 3): tarjeta Propuesta/Permiso — mismo cromo que ApprovalView
-        .jeslyProposal: ViewLayout(height: 160, botX: 62, botY: nil, botDiameter: 56, agentMode: .column),
+        // JESLY (Fase 3): tarjeta Propuesta/Permiso — mismo cromo que ApprovalView.
+        // Altura medida en la verificación en vivo 2026-11-27: con
+        // 160 la tarjeta se veía entera (1-2 líneas de texto), pero
+        // la línea de feedback (+~19) la dejaba al límite: cabecera
+        // ~22 + cuerpo 2 líneas ~34 + sub ~15 + botones ~29 + top 4
+        // + gaps 15 + padding 8 = ~127; con feedback ~146. Cromo
+        // fijo de la isla = 52, así que la ventana necesita ~198.
+        // Elegida 200: área útil 148, cubre 2 líneas + feedback.
+        .jeslyProposal: ViewLayout(height: 200, botX: 62, botY: nil, botDiameter: 56, agentMode: .column),
         // JESLY (Fase 3, sesión 3): tarjeta de sesión en vivo.
         // Altura medida en la verificación en vivo 2026-11-27:
         // con 160 los botones quedaban cortados fuera de la isla.
@@ -267,8 +274,28 @@ enum IslandConst {
         // botY nil = auto-centrado, la altura no rompe botPosition
         // ni islandSize, que devuelve layout.height tal cual.)
         .jeslySession:  ViewLayout(height: 330, botX: 62,  botY: nil, botDiameter: 56, agentMode: .column),
-        // JESLY (Fase 4, sesión 2): vista de chat — misma tarjeta que la de permiso
-        .jeslyChat:     ViewLayout(height: 160, botX: 62,  botY: nil, botDiameter: 56, agentMode: .column),
+        // JESLY (Fase 4, sesión 2): vista de chat.
+        // Altura medida en la verificación en vivo 2026-11-27:
+        // con 160 solo se veían los chips y el aviso; la barra de
+        // entrada quedaba cortada y el área de mensajes no se veía.
+        // Contenido fijo (VStack spacing 6, padding top 12 +
+        // bottom 14 + outer bottom 10): chips ~22 + zona de soltar
+        // ~31 + fila de entrada ~44 + gaps 18 + paddings 36 = ~151;
+        // sin mensajes el aviso (~30, 2 líneas) suma ~181. Cromo
+        // fijo de la isla = 52. Con mensajes, el área útil debe
+        // dejar ~120 pt para la lista: 151 + 120 + 52 = 323.
+        // Elegida 330 (igual que la sesión): área útil 278, deja
+        // ~127 pt de mensajes; con fila de adjuntos o línea de
+        // error la lista se estrecha pero sigue visible y con
+        // scroll. OJO: la altura sola NO basta — la lista es un
+        // ScrollView con maxHeight .infinity dentro del marco fijo
+        // de 98 pt de IslandRootView, donde se aplasta a 0; por eso
+        // .jeslyChat también se declara vista "alta" en isTall
+        // (como .prompt), para que el marco sea flexible y la lista
+        // llene el área útil. botY nil = auto-centrado, la altura
+        // no rompe botPosition ni islandSize, que devuelve
+        // layout.height tal cual.
+        .jeslyChat:     ViewLayout(height: 330, botX: 62,  botY: nil, botDiameter: 56, agentMode: .column),
         .error:     ViewLayout(height: 160, botX: 62,  botY: nil, botDiameter: 58, agentMode: .column),
         .finished:  ViewLayout(height: 160, botX: 62,  botY: nil, botDiameter: 58, agentMode: .column),
         .confused:  ViewLayout(height: 160, botX: 76,  botY: nil, botDiameter: 66, agentMode: .column),
