@@ -810,6 +810,15 @@ struct SettingsView: View {
     @ViewBuilder private var agentsSection: some View {
         GroupBox(String(localized: "hooks.claude-code.title")) {
             VStack(alignment: .leading, spacing: 10) {
+                // Fase 6, sesión 2 (decisión A de JC): los hooks están
+                // apagados por defecto — nada se instala solo al
+                // arrancar. JESLY funciona completo sin hooks (todo va
+                // por la API); instálalos solo si quieres vigilar
+                // sesiones de terminal en la isla.
+                Text("Hooks apagados por defecto: JESLY funciona completo sin ellos. Nada se instala solo al arrancar — usa Instalar solo si quieres vigilar sesiones de terminal (Claude Code, Cursor, Codex, Gemini CLI) en la isla.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 if hookNeedsUpdate {
                     HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -1882,22 +1891,19 @@ struct SettingsView: View {
         }
     }
 
-    /// Marca propia (UserDefaults, solo la ve este fork): true si los
-    /// hooks de Claude los instaló este fork. Si settings.json tiene
-    /// entradas nb-hook y la marca no está, las instaló otra app
-    /// (Coucou original). No se puede distinguir por el contenido:
-    /// el fork y Coucou original escriben el mismo nb-hook.
-    private static let jeslyForkHooksOwnerKey = "jeslyForkHooksInstalled"
-    private static var jeslyForkOwnsClaudeHooks: Bool {
-        UserDefaults.standard.bool(forKey: jeslyForkHooksOwnerKey)
-    }
+    // Marca de dueña de los hooks: vive en HookServer
+    // (`jeslyForkHooksOwnerKey` / `jeslyForkOwnsHooks`, Fase 6) para
+    // que `start()` y Ajustes lean la misma. Si settings.json tiene
+    // entradas nb-hook y la marca no está, las instaló otra app
+    // (Coucou original). No se puede distinguir por el contenido:
+    // el fork y Coucou original escriben el mismo nb-hook.
 
     private func installHooks() {
         // Fase 6: una sola app puede ser dueña de los hooks. Si
         // settings.json ya tiene entradas nb-hook y no las instaló
         // este fork, otra app es la dueña: avisar antes de tocar
         // nada en vez de instalar por encima en silencio.
-        if HookServer.claudeHooksInstalled() && !Self.jeslyForkOwnsClaudeHooks {
+        if HookServer.claudeHooksInstalled() && !HookServer.jeslyForkOwnsHooks {
             showHookOwnerAlert = true
             return
         }
@@ -1917,7 +1923,7 @@ struct SettingsView: View {
     private func confirmInstall() {
         do {
             try HookServer.shared.writeClaudeHooks()
-            UserDefaults.standard.set(true, forKey: Self.jeslyForkHooksOwnerKey)
+            UserDefaults.standard.set(true, forKey: HookServer.jeslyForkHooksOwnerKey)
             showDiff = false
             statusMessage = String(localized: "status.hooks-installed-settings")
             pendingHookJSON = ""
@@ -1930,7 +1936,7 @@ struct SettingsView: View {
     private func uninstallHooks() {
         do {
             try HookServer.shared.uninstallClaudeHooks()
-            UserDefaults.standard.set(false, forKey: Self.jeslyForkHooksOwnerKey)
+            UserDefaults.standard.set(false, forKey: HookServer.jeslyForkHooksOwnerKey)
             statusMessage = String(localized: "status.hooks-removed")
         } catch {
             statusMessage = "❌ \(error.localizedDescription)"

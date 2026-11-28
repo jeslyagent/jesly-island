@@ -1138,3 +1138,56 @@ instalar → alerta → hacerse dueña). Pendientes sueltos: quitar el
 paso "Wardrobe tests" de `.github/workflows/build.yml` (403); las 3
 decisiones de `PRODUCT_NAME`/bundle id; instaladores de hooks de
 agentes quitados como código muerto (limpieza posterior).
+
+## FASE 6, SESIÓN 2 — Decisión A: hooks apagados por defecto (2026-11-27)
+
+Decisión de JC: **A — hooks apagados por defecto**. Sin push, sin compilar.
+
+### 1. Auditoría de caminos de arranque
+
+- `AppDelegate.setupIsland()` → `HookServer.shared.start()` (único
+  arranque): **INSTALABA SOLO** — `installHookScript()` en cada
+  arranque reescribía nb-hook/nb-hook.py en el dir compartido aunque
+  JC nunca hubiera instalado hooks en el fork. **GUARDA AÑADIDA:**
+  el script solo se escribe si `HookServer.jeslyForkOwnsHooks`
+  (marca `jeslyForkHooksInstalled`, que pone `confirmInstall()` y
+  quita `uninstallHooks()`). La marca vivía duplicada en
+  `SettingsView`; ahora vive solo en `HookServer` y Ajustes la lee
+  de ahí. La guarda del socket de la sesión 1 sigue igual.
+- Instaladores manuales Claude/Gemini/Antigravity/Codex/Copilot/
+  Muse (`write*Hooks()`): **NO INSTALAN SOLOS** — solo desde los
+  botones de confirmar de Ajustes tras ver el diff. Se quedan como
+  están, salvo que cada uno escribe ahora el script nb-hook al
+  confirmar (antes lo garantizaba `start()`; sin eso, una
+  instalación manual en máquina nueva apuntaría a un script
+  inexistente). App Store ya escribía script + settings en un paso.
+- StatusLine, botón "Update hooks", activar pills: manuales o solo
+  lectura. Onboarding/primera ejecución que toque hooks: no existe.
+  Sin cambios en ninguno.
+
+### 2. Texto visible nuevo
+
+Ajustes → Agents, arriba del cuadro de Claude Code: "Hooks apagados
+por defecto: JESLY funciona completo sin ellos. Nada se instala solo
+al arrancar — usa Instalar solo si quieres vigilar sesiones de
+terminal (Claude Code, Cursor, Codex, Gemini CLI) en la isla."
+
+### 3. Verificación sin compilar (hecha)
+
+Balance 0 en `HookServer.swift` y `SettingsView.swift` (el -6 de
+paréntesis de `HookServer.swift` es ruido del escáner, idéntico en
+el archivo base upstream); 0 restos de la marca vieja
+(`jeslyForkOwnsClaudeHooks` / `Self.jeslyForkHooksOwnerKey`);
+`installHookScript()` solo se llama desde `start()` (con guarda) y
+los 6 `write*Hooks()` manuales; `start()` solo se llama desde
+`AppDelegate.setupIsland()`. **Sin compilar: solo la Mac lo
+confirma.** Sospechosos: la guarda de `start()` o el texto nuevo.
+
+### 4. Para cerrar la Fase 6
+
+Verificación en vivo de 14 pasos (README-FASE2.md §19.3) con la API
+arrancada, que corre JC en su Mac; probar la guarda en vivo (fork
+con Coucou corriendo → aviso, sin robo de socket ni reescritura del
+script; instalar → alerta "Los hooks ya tienen dueña"). Pendientes
+sueltos: quitar el paso "Wardrobe tests" de `.github/workflows/build.yml`
+(403); las 3 decisiones de `PRODUCT_NAME`/bundle id.

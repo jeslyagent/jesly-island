@@ -35,6 +35,20 @@ final class HookServer: @unchecked Sendable {
     /// Ajustes → Agents para avisar en pantalla (el NSLog solo no basta).
     static let socketTakenKey = "jeslySocketTakenByOtherApp"
 
+    /// Clave (UserDefaults) que marca si los hooks los instaló este fork.
+    /// La pone `confirmInstall()` en Ajustes y la quita
+    /// `uninstallHooks()`. Fase 6, sesión 2 (decisión A de JC: hooks
+    /// apagados por defecto): `start()` solo reescribe el script nb-hook
+    /// si esta marca está puesta; sin ella, el fork no toca nada
+    /// compartido al arrancar. Si settings.json tiene entradas nb-hook
+    /// y la marca no está, las instaló otra app (Coucou original): por
+    /// el contenido no se puede distinguir, el fork y Coucou original
+    /// escriben el mismo nb-hook.
+    static let jeslyForkHooksOwnerKey = "jeslyForkHooksInstalled"
+    static var jeslyForkOwnsHooks: Bool {
+        UserDefaults.standard.bool(forKey: jeslyForkHooksOwnerKey)
+    }
+
     // No approval blocking state — notch is notification-only, user answers in VS Code
 
     private static let maxPayload = 1_048_576          // 1 MB — reject oversized messages
@@ -471,7 +485,12 @@ final class HookServer: @unchecked Sendable {
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         try? FileManager.default.setAttributes([.posixPermissions: 0o700 as NSNumber], ofItemAtPath: dir.path)
         #if !APPSTORE
-        installHookScript()
+        // Fase 6, sesión 2 (decisión A de JC: hooks apagados por
+        // defecto). Antes se reescribía nb-hook en cada arranque aunque
+        // JC nunca hubiera instalado hooks en el fork. Ahora el script
+        // solo se escribe si este fork es el dueño (marca de Ajustes);
+        // cada instalación manual lo escribe ella misma.
+        if Self.jeslyForkOwnsHooks { installHookScript() }
         #endif
         Thread.detachNewThread { self.serverThread() }
     }
@@ -1736,6 +1755,9 @@ final class HookServer: @unchecked Sendable {
     /// Refused if settings.json changed since the preview, or cannot be backed up.
     func writeClaudeHooks() throws {
         guard let data = _pendingHooksData else { return }
+        // Fase 6, sesión 2: el script nb-hook se escribe con la
+        // instalación manual, no al arrancar (ver `start()`).
+        installHookScript()
         let settingsURL = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".claude/settings.json")
         try ClaudeSettingsFile.write(data, to: settingsURL, expecting: _pendingHooksOriginal)
@@ -2134,6 +2156,9 @@ final class HookServer: @unchecked Sendable {
 
     func writeGeminiHooks() throws {
         guard let data = _pendingGeminiData, let fp = _pendingGeminiFingerprint else { return }
+        // Fase 6, sesión 2: el script nb-hook se escribe con la
+        // instalación manual, no al arrancar (ver `start()`).
+        installHookScript()
         let url = Self.geminiSettingsURL
         let current = (try? Data(contentsOf: url)) ?? Data()
         guard sha256Hex(current) == fp else {
@@ -2230,6 +2255,9 @@ final class HookServer: @unchecked Sendable {
 
     func writeAgyHooks() throws {
         guard let data = _pendingAgyData, let fp = _pendingAgyFingerprint else { return }
+        // Fase 6, sesión 2: el script nb-hook se escribe con la
+        // instalación manual, no al arrancar (ver `start()`).
+        installHookScript()
         let url = Self.agyHooksURL
         let current = (try? Data(contentsOf: url)) ?? Data()
         guard sha256Hex(current) == fp else {
@@ -2368,6 +2396,9 @@ final class HookServer: @unchecked Sendable {
 
     func writeCodexHooks() throws {
         guard let data = _pendingCodexData, let fp = _pendingCodexFingerprint else { return }
+        // Fase 6, sesión 2: el script nb-hook se escribe con la
+        // instalación manual, no al arrancar (ver `start()`).
+        installHookScript()
         let url = Self.codexHooksURL
         let current = (try? Data(contentsOf: url)) ?? Data()
         guard sha256Hex(current) == fp else {
@@ -2493,6 +2524,9 @@ final class HookServer: @unchecked Sendable {
 
     func writeCopilotHooks() throws {
         guard let fp = _pendingCopilotFingerprint else { return }
+        // Fase 6, sesión 2: el script nb-hook se escribe con la
+        // instalación manual, no al arrancar (ver `start()`).
+        installHookScript()
         let url = Self.copilotHooksURL
         let current = (try? Data(contentsOf: url)) ?? Data()
         guard sha256Hex(current) == fp else {
@@ -2614,6 +2648,9 @@ final class HookServer: @unchecked Sendable {
 
     func writeMuseHooks() throws {
         guard let data = _pendingMuseData, let fp = _pendingMuseFingerprint else { return }
+        // Fase 6, sesión 2: el script nb-hook se escribe con la
+        // instalación manual, no al arrancar (ver `start()`).
+        installHookScript()
         let url = Self.museSettingsURL
         let current = (try? Data(contentsOf: url)) ?? Data()
         guard sha256Hex(current) == fp else {
