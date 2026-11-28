@@ -1361,3 +1361,110 @@ Tras el pull + build en la Mac de JC, la verificación de 14 pasos
 JESLY debe marcar **4** y la tarjeta de la propuesta A debe
 abrirse sola **sin caerse**. Las 4 propuestas siguen en
 `esperando_aprobacion` en la API; no hay que recrearlas.
+
+## FASE 6 — CORRECCIÓN: tarjeta de sesión recortada (altura 160) + spinners eternos en los pasos (2026-11-27, sin pushear, sin compilar)
+
+### 1. Queja de JC en vivo (2026-11-27, verificación Fase 6)
+
+La tarjeta de permiso FUNCIONÓ (paso 4 PASS: "JESLY necesita
+permiso 1/4", D primero). JC tocó Siempre en D y la isla pasó a
+la tarjeta de sesión en vivo (`JeslySessionView`). Su queja,
+textual: "Se queda cargando y no se ve bien porque se esconde en
+la isla. Hay que modificarlo." Captura: se ven la cabecera
+("Sesión en vivo", diff +1 −0) y las 4 filas de pasos, pero los
+botones de abajo (Aplicar/Ejecutar) quedan cortados fuera de la
+isla.
+
+### 2. Defecto 1: altura 160, medida
+
+El layout de `.jeslySession` en `IslandConst.viewLayouts`
+(`NotchBuddy/Sources/CoucouKit/IslandTypes.swift`) era height
+160, copiado de `.approval`. Pero la tarjeta de sesión lleva
+cabecera + hasta 4 filas de pasos + botones (+ feedback), mucho
+más alta que 160.
+
+Medida del contenido real de `JeslySessionView` (VStack spacing
+8, padding vertical 4+4; botón = texto 12.5 pt + padding
+vertical 7+7 ≈ 29 pt):
+
+- Cabecera: texto 13 pt ≈ 16.
+- Fila de paso: texto 13 pt ≈ 16 + padding vertical 5+5 = 26.
+  ×4 = 104.
+- Fila de botones: ~29 + padding top 4 = 33.
+- Gaps (spacing 8): planificada 5 gaps = 40; aplicada 6 = 48.
+- Padding vertical del VStack: 8.
+
+Totales y altura de ventana necesaria (cromo fijo de la isla:
+padding top 8 + cabecera 34 + padding bottom 10 = 52):
+
+- Planificada (4 pasos + 1 fila de botones): ~201 → ≥ 253.
+- Aplicada (4 pasos + 2 filas de botones): ~242 → ≥ 294.
+- Aplicada + línea de feedback (+27): ~269 → ≥ 321.
+
+Detalle de geometría que importa: `islandSize` (modo
+`.expanded`) devuelve `layout.height` tal cual, y la tarjeta
+vive en el marco fijo de 98 pt de `IslandRootView` (solo
+`.prompt`, `.mail`, `.whatsNew` y `.overview` en esquina son
+"altas" y flexibles); el desborde del marco NO se recorta ahí,
+solo lo recorta la ventana, y el contenido queda centrado en el
+área útil (altura − 52). Por eso con 160 se veían cabecera y
+filas pero los botones quedaban fuera, y por eso subir la altura
+de la ventana es lo que deja ver la tarjeta entera. `botY` nil
+(auto-centrado) sigue igual: la altura no rompe `botPosition`
+(usa `islandH` para centrar) ni `islandSize`. `.jeslyProposal`
+NO se toca (la tarjeta de permiso se vio entera y bien).
+`.jeslyChat` tampoco: su lista de mensajes es un `ScrollView`
+con `maxHeight: .infinity` y la fila de entrada queda siempre
+abajo — el chat no se recorta, desplaza.
+
+Altura elegida: **330** (área útil 278). Cubre aplicada +
+feedback (~269) con ~9 pt de margen. Solo el spinner de
+`working` (transitorio, una fracción de segundo, redundante con
+los botones deshabilitados) podría recortarse; no es estado
+estable. Nota para un lote posterior: lo limpio sería declarar
+`.jeslySession` vista "alta" en el `isTall` de `IslandRootView`
+(como `.mail`/`.whatsNew`) en vez de fijar la altura a mano;
+esta sesión se limitó a `IslandTypes.swift` +
+`JeslySessionCardView.swift` por encargo.
+
+### 3. Defecto 2: spinners eternos en los pasos
+
+`JeslyStepIcon` (al final de `JeslySessionCardView.swift`)
+dibujaba un `ProgressView` girando en TODOS los pasos en curso
+(planificados + en espera). Como esos pasos pueden estar así
+minutos, JC lo leía como "se queda cargando". Corrección: el
+paso en curso ahora es un **anillo hueco ESTÁTICO** — el círculo
+del ZStack (relleno transparente, borde `#6B7079`), sin nada
+dentro, mismo estilo que el círculo de los pasos terminados
+pero vacío, sin animación. El `ProgressView` pequeño de
+`working` (`JeslySessionView`, acción real en vuelo:
+Aplicar/Ejecutar/Verificar/Publicar) SE QUEDA: ese sí es carga
+real y debe verse.
+
+### 4. Archivos tocados (solo 2)
+
+- `NotchBuddy/Sources/CoucouKit/IslandTypes.swift`:
+  `.jeslySession` height 160 → **330** (mismo botX/botY/
+  botDiameter/agentMode), con el desglose de la medida en el
+  comentario. `.jeslyProposal` y `.jeslyChat` intactas en 160.
+- `NotchBuddy/Sources/JeslyIsland/Views/JeslySessionCardView.swift`:
+  `JeslyStepIcon` sin `ProgressView` (anillo hueco estático) +
+  comentario en la cabecera del archivo ("(spinner)" →
+  "(anillo hueco estático)").
+
+### 5. Verificación sin compilar (hecha)
+
+Balance llaves/paréntesis/corchetes **0** en los 2 archivos
+(escáner Swift-aware); grep: queda UN solo `ProgressView()` en
+`JeslySessionCardView.swift` (línea 163, el de `working`); en
+`JeslyStepIcon` no queda ninguno. **Sin compilar: solo la Mac
+lo confirma.** Sospechoso si falla: la altura nueva o el icono.
+
+### 6. Para retomar la verificación en vivo
+
+Tras el pull + build en la Mac de JC, la verificación de 14
+pasos (§19.3) se retoma en el **paso 5** (Aplicar en la
+propuesta A): la tarjeta de sesión debe mostrar las 4 filas Y
+los botones completos, sin spinners girando en los pasos. Las
+propuestas D (Siempre), C (Denegar) y B (Permitir) ya fueron
+decididas por JC; A sigue en planificada con su parche.

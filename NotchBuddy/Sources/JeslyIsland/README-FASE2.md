@@ -1886,3 +1886,47 @@ Tras el pull + build en la Mac de JC, la verificación de 14 pasos
 JESLY debe marcar **4** y la tarjeta de la propuesta A debe
 abrirse sola **sin caerse**. Las 4 propuestas siguen en
 `esperando_aprobacion` en la API; no hay que recrearlas.
+
+## §23. FASE 6 — CORRECCIÓN: tarjeta de sesión recortada (altura 160) + spinners eternos
+
+### 23.1 Queja de JC en vivo (2026-11-27)
+
+La tarjeta de permiso funcionó (paso 4 PASS) y JC tocó Siempre
+en D: la isla pasó a la tarjeta de sesión en vivo. Queja textual:
+"Se queda cargando y no se ve bien porque se esconde en la isla.
+Hay que modificarlo." En la captura se ven la cabecera y las 4
+filas de pasos, pero los botones (Aplicar/Ejecutar) quedan
+cortados fuera de la isla.
+
+### 23.2 Defecto 1: altura 160, medida
+
+El layout de `.jeslySession` era height 160, copiado de
+`.approval`. Medida del contenido real de `JeslySessionView`
+(VStack spacing 8, padding vertical 4+4): cabecera ~16 + 4 filas
+× 26 (= 104) + fila de botones ~29 + top 4 + gaps 40 = ~201 en
+planificada; aplicada añade 2ª fila (+41) = ~242; más feedback
+(+27) = ~269. Cromo fijo de la isla (top 8 + cabecera 34 +
+bottom 10) = 52, así que la ventana necesita 253 / 294 / 321.
+La tarjeta vive en el marco fijo de 98 pt de `IslandRootView` y
+el desborde solo lo recorta la ventana, así que subir la altura
+es lo que deja verla entera; `botY` nil sigue auto-centrando y
+no rompe `botPosition` ni `islandSize`. **Altura elegida: 330**
+(área útil 278, cubre aplicada + feedback con margen).
+`.jeslyProposal` no se toca (se vio entera) ni `.jeslyChat` (su
+lista es un `ScrollView`, no se recorta).
+
+### 23.3 Defecto 2: spinners eternos en los pasos
+
+`JeslyStepIcon` giraba un `ProgressView` en cada paso en curso,
+que puede estar así minutos: se leía como "se queda cargando".
+Ahora el paso en curso es un **anillo hueco estático** (mismo
+círculo que el terminado, vacío, sin animación). El `ProgressView`
+de `working` (acción real en vuelo) se queda.
+
+### 23.4 Para retomar la verificación en vivo
+
+Tras el pull + build en la Mac de JC, la verificación se retoma
+en el **paso 5** (Aplicar en la propuesta A): la tarjeta de
+sesión debe mostrar las 4 filas Y los botones completos, sin
+spinners girando en los pasos. D, C y B ya fueron decididas por
+JC; A sigue en planificada con su parche.

@@ -18,7 +18,7 @@ import SwiftUI
 ///     de verdad por `JeslyPatchStats` (líneas `+`/`-` sin contar
 ///     las cabeceras `+++`/`---`, igual que la isla);
 ///   pasos: las aplicadas arriba (✓) y las planificadas + en espera
-///     abajo (spinner), máx. 4, con la hora HH:mm de `updatedAt`.
+///     abajo (anillo hueco estático), máx. 4, con la hora HH:mm de `updatedAt`.
 ///   Sin tareas: "Nada en curso. Cuando un agente proponga algo,
 ///     aparece aquí."
 ///   Debajo, los botones de la tarea en curso (Aplicar / Ejecutar /
@@ -314,10 +314,14 @@ private struct JeslyStepIcon: View {
                 Image(systemName: "checkmark")
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(Color(hex: "#141310"))
-            } else {
-                ProgressView()
-                    .controlSize(.mini)
             }
+            // En curso: anillo hueco ESTÁTICO — el círculo del ZStack,
+            // sin nada dentro. Antes había un ProgressView girando en
+            // cada paso en curso y, como esos pasos pueden estar así
+            // minutos, JC lo leía como "se queda cargando"
+            // (verificación en vivo 2026-11-27). La carga real vive
+            // en `working` (el ProgressView de JeslySessionView),
+            // no aquí: ese sí es carga real y se queda.
         }
     }
 }

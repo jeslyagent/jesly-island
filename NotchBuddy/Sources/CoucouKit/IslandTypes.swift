@@ -250,8 +250,23 @@ enum IslandConst {
         .question:  ViewLayout(height: 160, botX: 62,  botY: nil, botDiameter: 56, agentMode: .column),
         // JESLY (Fase 3): tarjeta Propuesta/Permiso — mismo cromo que ApprovalView
         .jeslyProposal: ViewLayout(height: 160, botX: 62, botY: nil, botDiameter: 56, agentMode: .column),
-        // JESLY (Fase 3, sesión 3): tarjeta de sesión en vivo — misma tarjeta que la de permiso
-        .jeslySession:  ViewLayout(height: 160, botX: 62,  botY: nil, botDiameter: 56, agentMode: .column),
+        // JESLY (Fase 3, sesión 3): tarjeta de sesión en vivo.
+        // Altura medida en la verificación en vivo 2026-11-27:
+        // con 160 los botones quedaban cortados fuera de la isla.
+        // Contenido real (VStack spacing 8, padding vertical 4+4):
+        // cabecera ~16 + 4 filas de pasos × 26 (= 104) + fila de
+        // botones ~29 + top 4 + gaps 40 (planificada) = ~201;
+        // aplicada añade 2ª fila de botones (+41) = ~242; más la
+        // línea de feedback (+27) = ~269. Cromo fijo de la isla:
+        // padding top 8 + cabecera 34 + padding bottom 10 = 52, así
+        // que la ventana necesita 253 / 294 / 321. Elegida 330:
+        // área útil 278, cubre aplicada + feedback con margen.
+        // (La tarjeta vive en el marco fijo de 98 pt de
+        // IslandRootView y el desborde solo lo recorta la ventana:
+        // subir la altura es lo que deja ver la tarjeta entera.
+        // botY nil = auto-centrado, la altura no rompe botPosition
+        // ni islandSize, que devuelve layout.height tal cual.)
+        .jeslySession:  ViewLayout(height: 330, botX: 62,  botY: nil, botDiameter: 56, agentMode: .column),
         // JESLY (Fase 4, sesión 2): vista de chat — misma tarjeta que la de permiso
         .jeslyChat:     ViewLayout(height: 160, botX: 62,  botY: nil, botDiameter: 56, agentMode: .column),
         .error:     ViewLayout(height: 160, botX: 62,  botY: nil, botDiameter: 58, agentMode: .column),
