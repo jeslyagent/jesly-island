@@ -1041,3 +1041,11 @@ quedaron dos `else {` huérfanos sin `if` previo (uno por rama `#if
 !APPSTORE` / `#else`). Corrección: quitar los dos `else {` y dejar el
 `AgentPill` directo. Balance 0 verificado tras la corrección; no quedaba
 ningún otro `else {` huérfano en los archivos tocados.
+
+### 8. Corrección tras BUILD FAILED de JC (2026-11-27 20:02 AST)
+
+2 errores en `HookServer`, ambos "Cannot find 'isCopilotRequest' /
+'isMuseRequest' in scope": al quitar las definiciones de esos dos flags
+(agentes Copilot y Muse ya no existen) quedó su único uso en el timeout de
+seguridad de la cola de permisos. Corrección: timeout fijo de 115 s, sin la
+rama de 110 s que era solo para esos dos agentes.

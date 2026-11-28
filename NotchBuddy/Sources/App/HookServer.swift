@@ -1152,8 +1152,7 @@ final class HookServer: @unchecked Sendable {
 
         // Safety timeout — drop without a decision. nb-hook reads EOF from the cancel
         // handler's close and exits; the agent asks again itself.
-        // Copilot/Muse use 110s (their relay waits 118s but their hook timeout is 120s, leaving little margin).
-        let waitTimeout: Double = (isCopilotRequest || isMuseRequest) ? 110 : 115
+        let waitTimeout: Double = 115
         DispatchQueue.main.asyncAfter(deadline: .now() + waitTimeout) { [weak self] in
             guard let self, self.approvals.contains(id: entryId) else { return }
             self.removeApproval(id: entryId, note: self.waitingNote(pill: capturedPillId))
