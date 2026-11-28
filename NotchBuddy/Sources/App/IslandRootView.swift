@@ -523,7 +523,7 @@ func botPosition(mode: IslandMode, view: IslandView, islandW: CGFloat, islandH: 
             : (islandW / 2, resting.botCenterY, resting.botDiameter, 1)
     case .compact: return (40, resting.botCenterY, resting.botDiameter, 1)
     case .expanded:
-        let layout = IslandConst.viewLayouts[view]!
+        let layout = IslandConst.layout(for: view)
         let diameter = layout.botDiameter
         // Uploading: Mochi dot rides the leading edge of the progress fill.
         // Bar in island coords: left=36, width=526. cx = 36 + progress*526 (dot center at fill right edge).

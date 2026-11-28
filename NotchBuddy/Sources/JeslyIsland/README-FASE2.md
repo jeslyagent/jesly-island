@@ -1817,3 +1817,72 @@ Tras el pull + build en la Mac de JC, la verificación de 14 pasos
 JESLY debe marcar **4** y la tarjeta de la propuesta A debe
 abrirse sola. Las 4 propuestas siguen en `esperando_aprobacion`
 en la API; no hay que recrearlas.
+
+## §22. FASE 6 — CORRECCIÓN: crash al abrir la tarjeta, `viewLayouts` sin entradas JESLY
+
+### 22.1 Crash confirmado en vivo (2026-11-27)
+
+La app compiló y corrió, el sondeo ya trae las 4 propuestas (la
+corrección del `plan` funcionó), pero al abrir la tarjeta la app
+se cae. Captura de JC (depurador de Xcode):
+
+- `Thread 1: Fatal error: Unexpectedly found nil while unwrapping an Optional value`
+- `NotchBuddy/Sources/App/IslandRootView.swift:526`: el `!` sobre
+  `IslandConst.viewLayouts[view]`
+- Estado en el depurador: `mode = expanded`, `view = jeslyProposal`.
+
+### 22.2 Causa
+
+`IslandConst.viewLayouts` (`CoucouKit/IslandTypes.swift:244`) NO
+tiene entradas para NINGUNA de las tres vistas JESLY
+(`.jeslyProposal`, `.jeslySession`, `.jeslyChat` — casos en
+`IslandTypes.swift:21-23`). El `!` revienta en cuanto la isla
+intenta dibujar una de ellas en modo expandido. Hay un segundo
+`!` igual en `IslandWindowController.swift:2257` (`islandSize`,
+mismo `case .expanded`). Las Fases 3–4 se "verificaron" con la
+API apagada, así que la tarjeta nunca llegó a dibujarse y el
+hueco no se vio.
+
+Por qué el chat (Fase 4 s2, verificado "listo" por JC) no se cayó
+antes, si tampoco tenía entrada: **no se puede establecer por el
+código.** Las tres vistas comparten exactamente el mismo camino
+(`IslandViewContent` → `state.view` → `BotPlacement` e
+`islandSize`, ambos bajo `mode == .expanded`), así que no hay
+razón a nivel de código por la que `.jeslyChat` sobreviviera y
+`.jeslyProposal` no. Lo más plausible es circunstancial (que el
+modo no fuera `.expanded` cuando JC miró el chat en esas
+sesiones), pero eso no se puede comprobar desde el código ni
+desde las confirmaciones previas. Queda anotado como no
+establecido, no como hecho.
+
+### 22.3 Corrección (3 archivos)
+
+`CoucouKit/IslandTypes.swift`: tres entradas nuevas en
+`viewLayouts` tras `.question`, con el layout de `.approval`
+como base (height 160, botX 62, botY nil, botDiameter 56,
+agentMode .column) — la tarjeta de permiso copia el cromo de
+`ApprovalView` y la de sesión y el chat son tarjetas del mismo
+tipo — y helper nuevo `IslandConst.layout(for:)`: `viewLayouts[view]
+?? viewLayouts[.overview] ?? ViewLayout(...)` con los valores
+literales de `.overview`. Una vista sin entrada cae al layout de
+`.overview` en vez de reventar.
+
+`App/IslandRootView.swift:526` y
+`App/IslandWindowController.swift:2257`:
+`IslandConst.viewLayouts[view]!` →
+`IslandConst.layout(for: view)`. Ninguna otra lógica se toca.
+
+Verificación sin compilar: balance 0 en los 3 archivos
+(escáner Swift-aware); grep: no queda ningún
+`viewLayouts[...]!` en el árbol; los dos sitios de llamada usan
+`layout(for: view)`. **Sin compilar: solo la Mac lo confirma.**
+Sospechoso si falla: el helper `layout(for:)` o las entradas
+nuevas del diccionario.
+
+### 22.4 Para retomar la verificación en vivo
+
+Tras el pull + build en la Mac de JC, la verificación de 14 pasos
+(§19.3) se retoma en el **paso 4** (tarjeta de permiso): la pill
+JESLY debe marcar **4** y la tarjeta de la propuesta A debe
+abrirse sola **sin caerse**. Las 4 propuestas siguen en
+`esperando_aprobacion` en la API; no hay que recrearlas.

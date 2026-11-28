@@ -248,6 +248,12 @@ enum IslandConst {
         .empty:     ViewLayout(height: 160, botX: 70,  botY: nil, botDiameter: 62, agentMode: .none),
         .approval:  ViewLayout(height: 160, botX: 62,  botY: nil, botDiameter: 56, agentMode: .column),
         .question:  ViewLayout(height: 160, botX: 62,  botY: nil, botDiameter: 56, agentMode: .column),
+        // JESLY (Fase 3): tarjeta Propuesta/Permiso — mismo cromo que ApprovalView
+        .jeslyProposal: ViewLayout(height: 160, botX: 62, botY: nil, botDiameter: 56, agentMode: .column),
+        // JESLY (Fase 3, sesión 3): tarjeta de sesión en vivo — misma tarjeta que la de permiso
+        .jeslySession:  ViewLayout(height: 160, botX: 62,  botY: nil, botDiameter: 56, agentMode: .column),
+        // JESLY (Fase 4, sesión 2): vista de chat — misma tarjeta que la de permiso
+        .jeslyChat:     ViewLayout(height: 160, botX: 62,  botY: nil, botDiameter: 56, agentMode: .column),
         .error:     ViewLayout(height: 160, botX: 62,  botY: nil, botDiameter: 58, agentMode: .column),
         .finished:  ViewLayout(height: 160, botX: 62,  botY: nil, botDiameter: 58, agentMode: .column),
         .confused:  ViewLayout(height: 160, botX: 76,  botY: nil, botDiameter: 66, agentMode: .column),
@@ -276,6 +282,17 @@ enum IslandConst {
         // After an update: taller, four items then the stats (like mail, it fills the height)
         .whatsNew:     ViewLayout(height: 232, botX: 62,  botY: nil, botDiameter: 58, agentMode: .none),
     ]
+
+    /// Layout de una vista, con respaldo: una vista sin entrada usa el
+    /// layout de `.overview` (que siempre existe) en vez de reventar
+    /// al desenvolver el opcional. Corrección Fase 6 (crash en vivo
+    /// 2026-11-27): las vistas JESLY no tenían entrada y la búsqueda
+    /// con `!` tumbaba la app al abrir la tarjeta. El último `??` es
+    /// inalcanzable en la práctica (`.overview` siempre está) y
+    /// existe solo para no dejar ningún `!` en la búsqueda.
+    static func layout(for view: IslandView) -> ViewLayout {
+        viewLayouts[view] ?? viewLayouts[.overview] ?? ViewLayout(height: 160, botX: 68, botY: nil, botDiameter: 58, agentMode: .pills)
+    }
 
     // Project colors — keyed by lowercase display name or slug
     static let projectColors: [String: String] = [

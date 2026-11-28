@@ -2254,7 +2254,7 @@ func islandSize(mode: IslandMode, view: IslandView,
             let s = MailLayout.detailHeight != nil ? IslandPlacement.homeReadingSize : IslandPlacement.homeSize
             return (s.width, s.height)
         }
-        let layout = IslandConst.viewLayouts[view]!
+        let layout = IslandConst.layout(for: view)
         if view == .question, let h = QuestionLayout.height {
             return (IslandConst.expandedWidth, h)
         }
