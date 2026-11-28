@@ -1120,8 +1120,8 @@ Detalle completo en `README-FASE2.md` §19.3. Stack con
 crear 4 propuestas por `POST /v1/tasks` (A con parche que crea
 `docs/verificacion-fork-2026-11-27.md`, B/C/D sin parche;
 `agent_id: "mac"`, clave Bearer del `.env` si existe); Permitir →
-Aplicar (rama `jesly-test/<id-corto>`, worktree en
-`~/.cache/jesly/worktrees/<id-corto>`, main intacto) → Verificar
+Aplicar (rama `jarvis-test/<id-corto>`, worktree en
+`~/.cache/jarvis/worktrees/<id-corto>`, main intacto) → Verificar
 (checks locales 3000+3003) → Publicar (push de la rama, nunca
 merge a main) → Revertir (borra rama + worktree); chat con modelo
 real; voz manual + demonio Vosk (`arrancar-wake-word.sh`); ojos

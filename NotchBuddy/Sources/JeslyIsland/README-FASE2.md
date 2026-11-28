@@ -1542,11 +1542,11 @@ propuesta pasa a cancelada y hay que crear otra (paso 3).
 
 **Paso 5 — Aplicar + sesión en vivo (propuesta A).** La tarjeta de
 sesión en vivo muestra "Sesión en vivo", la rama
-`jesly-test/<id-corto>` y el diff real (archivo +1 −0) con los
+`jarvis-test/<id-corto>` y el diff real (archivo +1 −0) con los
 pasos. Tocar **Aplicar**. Debe verse: la tarea pasa a aplicada.
 Comprobar en la terminal (repo JESLY):
-`git branch --list 'jesly-test/*'` muestra la rama;
-`ls ~/.cache/jesly/worktrees/<id-corto>/docs/verificacion-fork-2026-11-27.md`
+`git branch --list 'jarvis-test/*'` muestra la rama;
+`ls ~/.cache/jarvis/worktrees/<id-corto>/docs/verificacion-fork-2026-11-27.md`
 existe; y el checkout principal NO tiene el archivo
 (`test -f docs/verificacion-fork-2026-11-27.md` en la raíz del repo
 debe dar que no existe). Si Aplicar responde 400, leer el motivo:
@@ -1559,11 +1559,11 @@ por defecto: health de 127.0.0.1:3000 y 127.0.0.1:3003) → debe
 verse el resumen del veredicto; un veredicto con fallos llega como
 200 con el informe, no como error. **Publicar** → empuja la rama
 de prueba a GitHub y NUNCA fusiona a main. Comprobar:
-`git branch -r --list 'origin/jesly-test/*'` muestra la rama, y en
+`git branch -r --list 'origin/jarvis-test/*'` muestra la rama, y en
 github.com/jeslyagent/Jesly-agent-ai existe la rama
-`jesly-test/<id-corto>`. **Revertir** → borra rama + worktree:
-`git branch --list 'jesly-test/*'` vacío y
-`~/.cache/jesly/worktrees/<id-corto>` ya no existe. La tarea queda
+`jarvis-test/<id-corto>`. **Revertir** → borra rama + worktree:
+`git branch --list 'jarvis-test/*'` vacío y
+`~/.cache/jarvis/worktrees/<id-corto>` ya no existe. La tarea queda
 en revertida.
 
 **Paso 7 — Chat con modelo real.** Abrir el chat de JESLY (pill
