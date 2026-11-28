@@ -3950,22 +3950,18 @@ struct AgentPillsView: View {
     @ViewBuilder
     private func pill(_ task: AgentTask) -> some View {
         #if !APPSTORE
-        else {
-            AgentPill(task: task, state: state, swapping: $swapping) {
-                swapping = true
-                state.setFocus(task.id)
-                SoundEngine.shared.play("blip")
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { swapping = false }
-            }
+        AgentPill(task: task, state: state, swapping: $swapping) {
+            swapping = true
+            state.setFocus(task.id)
+            SoundEngine.shared.play("blip")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { swapping = false }
         }
         #else
-        else {
-            AgentPill(task: task, state: state, swapping: $swapping) {
-                swapping = true
-                state.setFocus(task.id)
-                SoundEngine.shared.play("blip")
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { swapping = false }
-            }
+        AgentPill(task: task, state: state, swapping: $swapping) {
+            swapping = true
+            state.setFocus(task.id)
+            SoundEngine.shared.play("blip")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { swapping = false }
         }
         #endif
     }

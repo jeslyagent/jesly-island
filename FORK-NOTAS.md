@@ -1032,3 +1032,12 @@ errores, como antes.
 Verificación en la Mac de JC (pull + `xcodegen` + Shift+Cmd+K +
 Cmd+B + Cmd+R). Si BUILD SUCCEEDED: sesión verificada; luego
 Fase 6 (verificación en vivo + conflicto de hooks).
+
+### 7. Corrección tras BUILD FAILED de JC (2026-11-27 20:00 AST)
+
+2 errores en `IslandViewContent`, ambos "Expected expression" en
+`AgentPillsView.pill(_:)`: al quitar las ramas de Coucoudoro/Música/Spotify
+quedaron dos `else {` huérfanos sin `if` previo (uno por rama `#if
+!APPSTORE` / `#else`). Corrección: quitar los dos `else {` y dejar el
+`AgentPill` directo. Balance 0 verificado tras la corrección; no quedaba
+ningún otro `else {` huérfano en los archivos tocados.
